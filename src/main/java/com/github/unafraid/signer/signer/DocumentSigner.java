@@ -104,8 +104,8 @@ public class DocumentSigner {
 
         // Instantiate the provider dynamically with Java reflection
         try (ByteArrayInputStream confStream = new ByteArrayInputStream(config.getBytes())) {
-            final Class sunPkcs11Class = Class.forName(SUN_PKCS11_PROVIDER_CLASS);
-            final Constructor pkcs11Constr = sunPkcs11Class.getConstructor(InputStream.class);
+            final Class<?> sunPkcs11Class = Class.forName(SUN_PKCS11_PROVIDER_CLASS);
+            final Constructor<?> pkcs11Constr = sunPkcs11Class.getConstructor(InputStream.class);
             final Provider pkcs11Provider = (Provider) pkcs11Constr.newInstance(confStream);
             Security.addProvider(pkcs11Provider);
         } catch (Exception e) {
