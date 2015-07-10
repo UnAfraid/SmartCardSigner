@@ -1,9 +1,6 @@
 package com.github.unafraid.signer.server.handlers;
 
-import com.github.unafraid.signer.server.handlers.impl.APIHandler;
-import com.github.unafraid.signer.server.handlers.impl.DefaultHandler;
-import com.github.unafraid.signer.server.handlers.impl.HelloHandler;
-import com.github.unafraid.signer.server.handlers.impl.NotFoundHandler;
+import com.github.unafraid.signer.server.handlers.impl.*;
 import com.github.unafraid.signer.server.handlers.model.URLPattern;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -32,6 +29,7 @@ public class HandlerManager {
         registerHandler(new HelloHandler());
         registerHandler(new NotFoundHandler());
         registerHandler(new APIHandler());
+        registerHandler(new SignHandler());
 
         // Registering default handler last!!
         registerHandler(DefaultHandler.class);
