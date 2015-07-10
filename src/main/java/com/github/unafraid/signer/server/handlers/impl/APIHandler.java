@@ -47,7 +47,7 @@ public class APIHandler {
         final URLDecoder decoder = new URLDecoder();
         String contentToSign;
         try {
-            contentToSign = decoder.decode(req.uri().replace("/sign/", ""), "UTF-8");
+            contentToSign = decoder.decode(req.uri().replace("/api/sing/", ""), "UTF-8");
         } catch (Exception e) {
             return null;
         }
