@@ -12,9 +12,11 @@ import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpRequest;
 
+import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.prefs.Preferences;
 
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_TYPE;
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
@@ -42,7 +44,14 @@ public class APIHandler {
 
     @URLPattern("/api/sing/.*")
     public static FullHttpResponse sign(HttpRequest req) {
-        final String contentToSign = req.uri().replace("/api/sing/", "");
+        final URLDecoder decoder = new URLDecoder();
+        String contentToSign;
+        try {
+            contentToSign = decoder.decode(req.uri().replace("/sign/", ""), "UTF-8");
+        } catch (Exception e) {
+            return null;
+        }
+
         if (contentToSign.isEmpty()) {
             return new DefaultFullHttpResponse(HTTP_1_1, BAD_REQUEST, Unpooled.wrappedBuffer("Bad request!".getBytes(StandardCharsets.UTF_8)));
         }
@@ -51,7 +60,7 @@ public class APIHandler {
         final Gson gson = new GsonBuilder().create();
         final SignedDocument result;
         try {
-            result = signer.sign(contentToSign.getBytes(), System.getProperty(ServerManager.MIDLWARE_PATH), System.getProperty(ServerManager.CARD_PIN));
+            result = signer.sign(contentToSign.getBytes(), Preferences.userRoot().get(ServerManager.MIDLWARE_PATH, null), System.getProperty(ServerManager.CARD_PIN));
         } catch (Exception e) {
             return new DefaultFullHttpResponse(HTTP_1_1, INTERNAL_SERVER_ERROR, Unpooled.wrappedBuffer(e.getMessage().getBytes(StandardCharsets.UTF_8)));
         }

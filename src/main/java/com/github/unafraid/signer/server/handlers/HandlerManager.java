@@ -32,15 +32,11 @@ public class HandlerManager {
         registerHandler(new SignHandler());
 
         // Registering default handler last!!
-        registerHandler(DefaultHandler.class);
+        registerHandler(new DefaultHandler());
     }
 
     public void registerHandler(Object handler) {
-        if (handler instanceof Class) {
-            findAnnotation(null, (Class<?>) handler);
-        } else {
-            findAnnotation(handler, handler.getClass());
-        }
+        findAnnotation(handler, handler.getClass());
     }
 
     private void findAnnotation(Object handler, Class<?> clazz) {

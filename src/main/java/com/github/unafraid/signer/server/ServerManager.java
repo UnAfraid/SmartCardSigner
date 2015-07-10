@@ -33,12 +33,14 @@ import java.io.File;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.util.Scanner;
+import java.util.prefs.Preferences;
 
 /**
  * @author UnAfraid
  */
 public final class ServerManager {
     private static final Logger LOGGER = LoggerFactory.getLogger(ServerManager.class);
+    private static final Preferences PREFERENCES = Preferences.userRoot();
     public static final String MIDLWARE_PATH = "midlware_path";
     public static final String CARD_PIN = "card_pin";
     private static final String HOSTNAME = System.getProperty("network.hostname", "127.0.0.1");
@@ -54,12 +56,12 @@ public final class ServerManager {
         try (Scanner scanner = new Scanner(new CloseShieldedInputStream(System.in))) {
             System.out.println("Hello, please configure your server!");
             while (true) {
-                if (System.getProperty(MIDLWARE_PATH) == null) {
+                if (PREFERENCES.get(MIDLWARE_PATH, null) == null) {
                     System.out.print("Please specify where is your midlware lib (Full path):");
                     if (!scanner.hasNext()) {
                         System.exit(0);
                     }
-                    String line = scanner.nextLine();
+                    String line = scanner.nextLine().replace('\\', '/');
                     final File file = new File(line);
                     if (file.isFile()) {
                         // make sure file exists
@@ -69,7 +71,7 @@ public final class ServerManager {
                         }
 
                         // Set the property
-                        System.setProperty(MIDLWARE_PATH, file.getAbsolutePath());
+                        PREFERENCES.put(MIDLWARE_PATH, file.getAbsolutePath());
                         continue;
                     }
                     System.out.println("This is an invalid path, please try again!");

@@ -3,11 +3,14 @@ package com.github.unafraid.signer.signer;
 import com.github.unafraid.signer.signer.model.DocumentSignException;
 import com.github.unafraid.signer.signer.model.PrivateKeyAndCertChain;
 import com.github.unafraid.signer.signer.model.SignedDocument;
-import sun.security.pkcs11.SunPKCS11;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.lang.reflect.Constructor;
 import java.security.*;
 import java.security.cert.CertPath;
 import java.security.cert.Certificate;
@@ -22,10 +25,12 @@ import java.util.List;
  * Created by Svetlin Nakov on 10.7.2005 year..
  */
 public class DocumentSigner {
+    private static final Logger LOGGER = LoggerFactory.getLogger(DocumentSigner.class);
     private static final String PKCS11_KEYSTORE_TYPE = "PKCS11";
     private static final String X509_CERTIFICATE_TYPE = "X.509";
     private static final String CERTIFICATION_CHAIN_ENCODING = "PkiPath";
     private static final String DIGITAL_SIGNATURE_ALGORITHM_NAME = "SHA1withRSA";
+    private static final String SUN_PKCS11_PROVIDER_CLASS = "sun.security.pkcs11.SunPKCS11";
 
     public SignedDocument sign(byte[] data, String libraryPath, String pin) throws DocumentSignException {
         if (libraryPath == null || !new File(libraryPath).isFile()) {
@@ -95,11 +100,14 @@ public class DocumentSigner {
     private KeyStore loadKeyStoreFromSmartCard(String aPKCS11LibraryFileName, String aSmartCardPIN) throws GeneralSecurityException, IOException {
         // First configure the Sun PKCS#11 provider. It requires a stream (or file)
         // containing the configuration parameters - "name" and "library".
-        final byte[] pkcs11ConfigBytes = ("name = SmartCard\n" + "library = " + aPKCS11LibraryFileName).getBytes();
+        final String config = "name = SmartCard\n" + "library = " + aPKCS11LibraryFileName;
 
         // Instantiate the provider dynamically with Java reflection
-        try (ByteArrayInputStream confStream = new ByteArrayInputStream(pkcs11ConfigBytes)) {
-            Security.addProvider(new SunPKCS11(confStream));
+        try (ByteArrayInputStream confStream = new ByteArrayInputStream(config.getBytes())) {
+            final Class sunPkcs11Class = Class.forName(SUN_PKCS11_PROVIDER_CLASS);
+            final Constructor pkcs11Constr = sunPkcs11Class.getConstructor(InputStream.class);
+            final Provider pkcs11Provider = (Provider) pkcs11Constr.newInstance(confStream);
+            Security.addProvider(pkcs11Provider);
         } catch (Exception e) {
             throw new KeyStoreException("Can initialize Sun PKCS#11 security provider. Reason: " + e.getCause().getMessage());
         }
