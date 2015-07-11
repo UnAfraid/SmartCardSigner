@@ -15,7 +15,6 @@
  */
 package com.github.unafraid.signer.server;
 
-import com.github.unafraid.signer.utils.CloseShieldedInputStream;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
@@ -29,10 +28,8 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.net.Inet4Address;
 import java.net.InetAddress;
-import java.util.Scanner;
 import java.util.prefs.Preferences;
 
 /**
@@ -47,57 +44,19 @@ public final class ServerManager {
     private static final boolean SSL = System.getProperty("network.protocol", "").equalsIgnoreCase("ssl");
     private static final int PORT = Integer.parseInt(System.getProperty("network.port", SSL ? "8443" : "8080"));
 
-    private ServerManager() throws Exception {
-        configure();
+    private ServerManager() {
         init();
     }
 
-    private void configure() {
-        try (Scanner scanner = new Scanner(new CloseShieldedInputStream(System.in))) {
-            System.out.println("Hello, please configure your server!");
-            while (true) {
-                if (PREFERENCES.get(MIDLWARE_PATH, null) == null) {
-                    System.out.print("Please specify where is your midlware lib (Full path):");
-                    if (!scanner.hasNext()) {
-                        System.exit(0);
-                    }
-                    String line = scanner.nextLine().replace('\\', '/');
-                    final File file = new File(line);
-                    if (file.isFile()) {
-                        // make sure file exists
-                        if (!file.getName().endsWith(".dll") && !file.getName().endsWith(".so")) {
-                            System.out.println("Only DLL/SO files are accepted!");
-                            continue;
-                        }
-
-                        // Set the property
-                        PREFERENCES.put(MIDLWARE_PATH, file.getAbsolutePath());
-                        continue;
-                    }
-                    System.out.println("This is an invalid path, please try again!");
-                } else if (System.getProperty(CARD_PIN) == null) {
-                    System.out.print("Please specify where is your card's PIN:");
-                    if (!scanner.hasNext()) {
-                        System.exit(0);
-                    }
-                    String pin = scanner.nextLine();
-                    // TODO: Some verifications of the pin!
-
-                    // Set the property
-                    System.setProperty(CARD_PIN, pin);
-                }
-                break;
-            }
-        }
-    }
-
-    private void init() throws Exception {
-        final SslContext sslCtx;
+    private void init() {
+        SslContext sslCtx = null;
         if (SSL) {
-            final SelfSignedCertificate ssc = new SelfSignedCertificate("localhost");
-            sslCtx = SslContext.newServerContext(ssc.certificate(), ssc.privateKey());
-        } else {
-            sslCtx = null;
+            try {
+                final SelfSignedCertificate ssc = new SelfSignedCertificate("localhost");
+                sslCtx = SslContext.newServerContext(ssc.certificate(), ssc.privateKey());
+            } catch (Exception e) {
+                LOGGER.warn(e.getMessage(), e);
+            }
         }
 
         InetAddress listenAddress;

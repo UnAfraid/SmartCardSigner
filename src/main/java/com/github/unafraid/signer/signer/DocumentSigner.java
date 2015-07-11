@@ -3,6 +3,7 @@ package com.github.unafraid.signer.signer;
 import com.github.unafraid.signer.signer.model.DocumentSignException;
 import com.github.unafraid.signer.signer.model.PrivateKeyAndCertChain;
 import com.github.unafraid.signer.signer.model.SignedDocument;
+import com.github.unafraid.signer.utils.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,7 +41,8 @@ public class DocumentSigner {
         // Load the keystore from the smart card using the specified PIN code
         final KeyStore userKeyStore;
         try {
-            userKeyStore = loadKeyStoreFromSmartCard(libraryPath, pin);
+            userKeyStore = getKeystore(libraryPath);
+            userKeyStore.load(null, pin.toCharArray());
         } catch (Exception e) {
             throw new DocumentSignException("Can not read the keystore from the smart card.\n" +
                     "Possible reasons:\n" +
@@ -97,10 +99,10 @@ public class DocumentSigner {
      * library and the Sun PKCS#11 security provider. The PIN code for accessing
      * the smart card is required.
      */
-    private KeyStore loadKeyStoreFromSmartCard(String aPKCS11LibraryFileName, String aSmartCardPIN) throws GeneralSecurityException, IOException {
+    public KeyStore getKeystore(String aPKCS11LibraryFileName) throws GeneralSecurityException, IOException {
         // First configure the Sun PKCS#11 provider. It requires a stream (or file)
         // containing the configuration parameters - "name" and "library".
-        final String config = "name = SmartCard\n" + "library = " + aPKCS11LibraryFileName;
+        final String config = String.format(IOUtils.streamToByteArray(getClass().getResourceAsStream("/keystore.conf")), aPKCS11LibraryFileName);
 
         // Instantiate the provider dynamically with Java reflection
         try (ByteArrayInputStream confStream = new ByteArrayInputStream(config.getBytes())) {
@@ -113,10 +115,7 @@ public class DocumentSigner {
         }
 
         // Read the keystore form the smart card
-        final char[] pin = aSmartCardPIN.toCharArray();
-        final KeyStore keyStore = KeyStore.getInstance(PKCS11_KEYSTORE_TYPE);
-        keyStore.load(null, pin);
-        return keyStore;
+        return KeyStore.getInstance(PKCS11_KEYSTORE_TYPE);
     }
 
     /**
