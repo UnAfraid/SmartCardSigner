@@ -42,12 +42,12 @@ public class APIHandler {
         return response;
     }
 
-    @URLPattern("/api/sing/.*")
+    @URLPattern("/api/sign/.*")
     public static FullHttpResponse sign(HttpRequest req) {
         final URLDecoder decoder = new URLDecoder();
         String contentToSign;
         try {
-            contentToSign = decoder.decode(req.uri().replace("/api/sing/", ""), "UTF-8");
+            contentToSign = decoder.decode(req.uri().replace("/api/sign/", ""), "UTF-8");
         } catch (Exception e) {
             return null;
         }
