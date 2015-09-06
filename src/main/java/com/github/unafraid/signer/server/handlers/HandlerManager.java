@@ -29,7 +29,6 @@ public class HandlerManager {
         registerHandler(new HelloHandler());
         registerHandler(new NotFoundHandler());
         registerHandler(new APIHandler());
-        registerHandler(new SignHandler());
 
         // Registering default handler last!!
         registerHandler(new DefaultHandler());
