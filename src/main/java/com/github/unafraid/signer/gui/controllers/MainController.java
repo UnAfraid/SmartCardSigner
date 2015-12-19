@@ -2,7 +2,6 @@ package com.github.unafraid.signer.gui.controllers;
 
 import com.github.unafraid.signer.server.ServerNetworkManager;
 import com.github.unafraid.signer.signer.DocumentSigner;
-import com.github.unafraid.signer.signer.SignerConfig;
 import com.github.unafraid.signer.utils.Dialogs;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
@@ -66,8 +65,6 @@ public class MainController implements Initializable {
         }
 
         middlewarePath.setText(file.getAbsolutePath().replaceAll("\\\\", "/"));
-        SignerConfig.MIDDLEWARE_PATH = middlewarePath.getText();
-        SignerConfig.PIN_CODE = pinCodeField.getText();
         refreshStartStopButton();
     }
 
@@ -80,9 +77,6 @@ public class MainController implements Initializable {
                 Dialogs.showDialog(Alert.AlertType.ERROR, "Input error", "No pin code", "Please enter your PIN code!");
                 return;
             }
-
-            SignerConfig.MIDDLEWARE_PATH = middlewarePath.getText();
-            SignerConfig.PIN_CODE = pinCodeField.getText();
 
             startStopServerButton.setText("Verifying your Smart card...");
 
@@ -122,8 +116,6 @@ public class MainController implements Initializable {
             selectMiddlewareButton.setDisable(false);
             startStopServerButton.setText("Start server");
             startStopServerButton.getProperties().remove("started", Boolean.TRUE);
-            SignerConfig.MIDDLEWARE_PATH = middlewarePath.getText();
-            SignerConfig.PIN_CODE = pinCodeField.getText();
         }
     }
 
