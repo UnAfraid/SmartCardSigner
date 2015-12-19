@@ -4,14 +4,11 @@ import com.github.unafraid.signer.signer.model.DocumentSignException;
 import com.github.unafraid.signer.signer.model.PrivateKeyAndCertChain;
 import com.github.unafraid.signer.signer.model.SignedDocument;
 import com.github.unafraid.signer.utils.IOUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import sun.security.pkcs11.SunPKCS11;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.lang.reflect.Constructor;
 import java.security.*;
 import java.security.cert.CertPath;
 import java.security.cert.Certificate;
@@ -26,23 +23,32 @@ import java.util.List;
  * Created by Svetlin Nakov on 10.7.2005 year..
  */
 public class DocumentSigner {
-    private static final Logger LOGGER = LoggerFactory.getLogger(DocumentSigner.class);
+    private static KeyStore KEY_STORE;
+    private static String MIDDLEWARE_PATH;
     private static final String PKCS11_KEYSTORE_TYPE = "PKCS11";
     private static final String X509_CERTIFICATE_TYPE = "X.509";
     private static final String CERTIFICATION_CHAIN_ENCODING = "PkiPath";
     private static final String DIGITAL_SIGNATURE_ALGORITHM_NAME = "SHA1withRSA";
-    private static final String SUN_PKCS11_PROVIDER_CLASS = "sun.security.pkcs11.SunPKCS11";
 
-    public SignedDocument sign(byte[] data, String libraryPath, String pin) throws DocumentSignException {
-        if (libraryPath == null || !new File(libraryPath).isFile()) {
+    public static synchronized void init(String middlewarePath, String pinCode) throws Exception {
+        MIDDLEWARE_PATH = middlewarePath;
+        KEY_STORE = getKeystore();
+        KEY_STORE.load(null, pinCode.toCharArray());
+        final Enumeration<String> aliases = KEY_STORE.aliases();
+        if (!aliases.hasMoreElements()) {
+            throw new Error("No certificates available!");
+        }
+    }
+
+    public static SignedDocument sign(byte[] data) throws DocumentSignException {
+        if (MIDDLEWARE_PATH == null || !new File(MIDDLEWARE_PATH).isFile()) {
             throw new DocumentSignException("It is mandatory to choose a PCKS#11 native implementation library for for smart card (.dll or .so file)!");
         }
 
         // Load the keystore from the smart card using the specified PIN code
         final KeyStore userKeyStore;
         try {
-            userKeyStore = getKeystore(libraryPath);
-            userKeyStore.load(null, pin.toCharArray());
+            userKeyStore = getKeystore();
         } catch (Exception e) {
             throw new DocumentSignException("Can not read the keystore from the smart card.\n" +
                     "Possible reasons:\n" +
@@ -99,23 +105,23 @@ public class DocumentSigner {
      * library and the Sun PKCS#11 security provider. The PIN code for accessing
      * the smart card is required.
      */
-    public KeyStore getKeystore(String aPKCS11LibraryFileName) throws GeneralSecurityException, IOException {
+    public static KeyStore getKeystore() throws GeneralSecurityException, IOException {
+        if (KEY_STORE != null) {
+            return KEY_STORE;
+        }
         // First configure the Sun PKCS#11 provider. It requires a stream (or file)
         // containing the configuration parameters - "name" and "library".
-        final String config = String.format(IOUtils.streamToByteArray(getClass().getResourceAsStream("/keystore.conf")), aPKCS11LibraryFileName);
+        final String config = String.format(IOUtils.streamToByteArray(DocumentSigner.class.getResourceAsStream("/keystore.conf")), MIDDLEWARE_PATH);
 
         // Instantiate the provider dynamically with Java reflection
         try (ByteArrayInputStream confStream = new ByteArrayInputStream(config.getBytes())) {
-            final Class<?> sunPkcs11Class = Class.forName(SUN_PKCS11_PROVIDER_CLASS);
-            final Constructor<?> pkcs11Constr = sunPkcs11Class.getConstructor(InputStream.class);
-            final Provider pkcs11Provider = (Provider) pkcs11Constr.newInstance(confStream);
-            Security.addProvider(pkcs11Provider);
+            Security.addProvider(new SunPKCS11(confStream));
         } catch (Exception e) {
             throw new KeyStoreException("Can initialize Sun PKCS#11 security provider. Reason: " + e.getCause().getMessage());
         }
 
         // Read the keystore form the smart card
-        return KeyStore.getInstance(PKCS11_KEYSTORE_TYPE);
+        return KEY_STORE = KeyStore.getInstance(PKCS11_KEYSTORE_TYPE);
     }
 
     /**
@@ -124,10 +130,10 @@ public class DocumentSigner {
      * both certification chain and its corresponding private key. If the keystore has
      * no entries, an exception is thrown.
      */
-    private PrivateKeyAndCertChain getPrivateKeyAndCertChain(KeyStore aKeyStore) throws GeneralSecurityException {
-        final Enumeration aliasesEnum = aKeyStore.aliases();
+    private static PrivateKeyAndCertChain getPrivateKeyAndCertChain(KeyStore aKeyStore) throws GeneralSecurityException {
+        final Enumeration<String> aliasesEnum = aKeyStore.aliases();
         if (aliasesEnum.hasMoreElements()) {
-            final String alias = (String) aliasesEnum.nextElement();
+            final String alias = aliasesEnum.nextElement();
             final Certificate[] certificationChain = aKeyStore.getCertificateChain(alias);
             final PrivateKey privateKey = (PrivateKey) aKeyStore.getKey(alias, null);
             final PrivateKeyAndCertChain result = new PrivateKeyAndCertChain();
@@ -143,7 +149,7 @@ public class DocumentSigner {
      * @return Base64-encoded ASN.1 DER representation of given X.509 certification
      * chain.
      */
-    private String encodeX509CertChainToBase64(Certificate[] aCertificationChain) throws CertificateException {
+    private static String encodeX509CertChainToBase64(Certificate[] aCertificationChain) throws CertificateException {
         final List<Certificate> certList = Arrays.asList(aCertificationChain);
         final CertificateFactory certFactory = CertificateFactory.getInstance(X509_CERTIFICATE_TYPE);
         final CertPath certPath = certFactory.generateCertPath(certList);
@@ -154,7 +160,7 @@ public class DocumentSigner {
     /**
      * Signs given document with a given private key.
      */
-    private byte[] signDocument(byte[] aDocument, PrivateKey aPrivateKey) throws GeneralSecurityException {
+    private static byte[] signDocument(byte[] aDocument, PrivateKey aPrivateKey) throws GeneralSecurityException {
         final Signature signatureAlgorithm = Signature.getInstance(DIGITAL_SIGNATURE_ALGORITHM_NAME);
         signatureAlgorithm.initSign(aPrivateKey);
         signatureAlgorithm.update(aDocument);

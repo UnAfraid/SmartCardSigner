@@ -2,11 +2,10 @@
 
 <?import javafx.geometry.*?>
 <?import javafx.scene.control.*?>
-<?import javafx.scene.text.*?>
-<?import java.lang.*?>
 <?import javafx.scene.layout.*?>
-
-<VBox xmlns="http://javafx.com/javafx/8.0.40" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.github.unafraid.signer.gui.controllers.SignController">
+<?import javafx.scene.text.*?>
+<VBox xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.github.unafraid.signer.gui.controllers.SignController">
    <children>
       <TextFlow>
          <children>
@@ -16,7 +15,7 @@
             <Insets bottom="10.0" />
          </VBox.margin>
       </TextFlow>
-      <TextArea fx:id="signData" prefHeight="200.0" prefWidth="200.0" text="gosho" />
+      <TextArea fx:id="signData" prefHeight="200.0" prefWidth="200.0"/>
       <TextFlow>
          <children>
             <Text strokeType="OUTSIDE" strokeWidth="0.0" text="Signing Certificate" />
@@ -25,8 +24,12 @@
             <Insets bottom="5.0" top="10.0" />
          </VBox.margin>
       </TextFlow>
-      <ComboBox fx:id="certList" onAction="#onCertificateChanged" prefWidth="150.0" />
-      <TextArea fx:id="certDetails" prefHeight="200.0" prefWidth="200.0" text="Issued to: E=user89@gmail.com+DC=qsign-personal-ca+CN=Vencislav Vencislavov Atanasov  Serial Number: 00:E6:5F:0F:DB:79:C0:57:7F  Valid from 30.4.2014 г. 17:35:57 ч. to 30.4.2017 г. 17:35:57 ч.  Certificate Key Usage: Client,Sign,Encrypt  Email: user89@gmail.comIssued by: C=BG+O=InfoNotary PLC+DC=qsign-personal-ca+CN=i-Notary Personal Q Sign CA+OU=i-Notary Personal Q Sign CAStored in: InfoNotary" wrapText="true" />
+      <ComboBox fx:id="certList" maxWidth="1.7976931348623157E308" onAction="#onCertificateChanged" prefWidth="150.0"/>
+      <TextArea fx:id="certDetails" prefHeight="200.0" prefWidth="200.0" wrapText="true">
+         <VBox.margin>
+            <Insets top="5.0"/>
+         </VBox.margin>
+      </TextArea>
       <TextFlow>
          <children>
             <Text strokeType="OUTSIDE" strokeWidth="0.0" text="To confirm you agree to sign this text message using your selected certificate, please confirm by entering the master password:" />
@@ -35,7 +38,7 @@
             <Insets bottom="10.0" top="10.0" />
          </VBox.margin>
       </TextFlow>
-      <TextField fx:id="pinBox" />
+      <PasswordField fx:id="pinBox"/>
       <HBox>
          <children>
             <Button mnemonicParsing="false" onAction="#onCancel" prefWidth="100.0" text="Cancel">

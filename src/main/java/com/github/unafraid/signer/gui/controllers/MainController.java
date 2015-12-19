@@ -1,6 +1,9 @@
 package com.github.unafraid.signer.gui.controllers;
 
 import com.github.unafraid.signer.server.ServerNetworkManager;
+import com.github.unafraid.signer.signer.DocumentSigner;
+import com.github.unafraid.signer.signer.SignerConfig;
+import com.github.unafraid.signer.utils.Dialogs;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -15,7 +18,7 @@ import java.net.URL;
 import java.util.ResourceBundle;
 
 /**
- * Created by UnAfraid on 11.7.2015 ã..
+ * Created by UnAfraid on 11.7.2015 ï¿½..
  */
 public class MainController implements Initializable {
     private static final Logger LOGGER = LoggerFactory.getLogger(MainController.class);
@@ -25,6 +28,12 @@ public class MainController implements Initializable {
 
     @FXML
     private TextField middlewarePath;
+
+    @FXML
+    private Label pinCodeLabel;
+
+    @FXML
+    private PasswordField pinCodeField;
 
     @FXML
     private Button selectMiddlewareButton;
@@ -52,12 +61,13 @@ public class MainController implements Initializable {
         chooser.setSelectedExtensionFilter(new FileChooser.ExtensionFilter("*.dll", "*.so"));
 
         final File file = chooser.showOpenDialog(null);
-
         if (file == null) {
             return;
         }
 
         middlewarePath.setText(file.getAbsolutePath().replaceAll("\\\\", "/"));
+        SignerConfig.MIDDLEWARE_PATH = middlewarePath.getText();
+        SignerConfig.PIN_CODE = pinCodeField.getText();
         refreshStartStopButton();
     }
 
@@ -66,6 +76,25 @@ public class MainController implements Initializable {
         final Object started = startStopServerButton.getProperties().get("started");
 
         if (started != Boolean.TRUE) {
+            if (pinCodeField.getText().isEmpty()) {
+                Dialogs.showDialog(Alert.AlertType.ERROR, "Input error", "No pin code", "Please enter your PIN code!");
+                return;
+            }
+
+            SignerConfig.MIDDLEWARE_PATH = middlewarePath.getText();
+            SignerConfig.PIN_CODE = pinCodeField.getText();
+
+            startStopServerButton.setText("Verifying your Smart card...");
+
+            try {
+                DocumentSigner.init(middlewarePath.getText(), pinCodeField.getText());
+            } catch (Exception e) {
+                Dialogs.showExceptionDialog(Alert.AlertType.ERROR, "Smart card error", e.getMessage(), e);
+                return;
+            } finally {
+                startStopServerButton.setText("Start");
+            }
+
             try {
                 ServerNetworkManager.getInstance().start();
             } catch (Exception e) {
@@ -74,6 +103,8 @@ public class MainController implements Initializable {
 
             middlewareLabel.setDisable(true);
             middlewarePath.setDisable(true);
+            pinCodeLabel.setDisable(true);
+            pinCodeField.setDisable(true);
             selectMiddlewareButton.setDisable(true);
             startStopServerButton.setText("Stop");
             startStopServerButton.getProperties().put("started", Boolean.TRUE);
@@ -86,49 +117,16 @@ public class MainController implements Initializable {
 
             middlewareLabel.setDisable(false);
             middlewarePath.setDisable(false);
+            pinCodeLabel.setDisable(false);
+            pinCodeField.setDisable(false);
             selectMiddlewareButton.setDisable(false);
             startStopServerButton.setText("Start server");
             startStopServerButton.getProperties().remove("started", Boolean.TRUE);
-        }
-    }
-/*
-    @FXML
-    public void verifyPin(ActionEvent event) {
-        certificateSelector.getItems().clear();
-        if (!pin.getText().isEmpty()) {
-            try {
-                final DocumentSigner signer = new DocumentSigner();
-                final KeyStore store = signer.getKeystore(middlewarePath.getText());
-                store.load(null, pin.getText().toCharArray());
-                final Enumeration aliases = store.aliases();
-                while (aliases.hasMoreElements()) {
-                    Object alias = aliases.nextElement();
-                    try {
-                        final X509Certificate cert = (X509Certificate) store.getCertificate(alias.toString());
-                        certificateSelector.getItems().add(new CertificateHolder(cert));
-                    } catch (Exception e) {
-                        LOGGER.warn(e.getMessage(), e);
-                    }
-                }
-            } catch (Exception e) {
-                LOGGER.warn(e.getMessage(), e);
-            }
-        }
-        if (!certificateSelector.getItems().isEmpty()) {
-            Preferences.userRoot().put(ServerManager.MIDLWARE_PATH, middlewarePath.getText());
-            System.setProperty(ServerManager.CARD_PIN, pin.getText());
-            startButton.setDisable(false);
+            SignerConfig.MIDDLEWARE_PATH = middlewarePath.getText();
+            SignerConfig.PIN_CODE = pinCodeField.getText();
         }
     }
 
-    @FXML
-    public void selectCertificate(ActionEvent event) {
-        final CertificateHolder holder = certificateSelector.getSelectionModel().getSelectedItem();
-        if (holder != null) {
-            certificateDescr.setText(holder.getCertificate().toString());
-        }
-    }
-*/
     @FXML
     public void onApplicationExitRequest(ActionEvent event) {
         Platform.exit();
@@ -136,24 +134,5 @@ public class MainController implements Initializable {
 
     @FXML
     public void onAboutRequest(ActionEvent event) {
-
     }
-/*
-    static class CertificateHolder {
-        final X509Certificate _certificate;
-
-        CertificateHolder(X509Certificate certificate) {
-            _certificate = certificate;
-        }
-
-        public X509Certificate getCertificate() {
-            return _certificate;
-        }
-
-        @Override
-        public String toString() {
-            return _certificate.getSubjectDN().getName();
-        }
-    }
-*/
 }

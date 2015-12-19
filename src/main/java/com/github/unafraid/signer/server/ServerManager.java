@@ -30,16 +30,12 @@ import org.slf4j.LoggerFactory;
 
 import java.net.Inet4Address;
 import java.net.InetAddress;
-import java.util.prefs.Preferences;
 
 /**
  * @author UnAfraid
  */
 public final class ServerManager {
     private static final Logger LOGGER = LoggerFactory.getLogger(ServerManager.class);
-    private static final Preferences PREFERENCES = Preferences.userRoot();
-    public static final String MIDLWARE_PATH = "midlware_path";
-    public static final String CARD_PIN = "card_pin";
     private static final String HOSTNAME = System.getProperty("network.hostname", "127.0.0.1");
     private static final boolean SSL = System.getProperty("network.protocol", "").equalsIgnoreCase("ssl");
     private static final int PORT = Integer.parseInt(System.getProperty("network.port", SSL ? "8443" : "8080"));

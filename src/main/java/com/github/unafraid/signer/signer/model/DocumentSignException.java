@@ -5,6 +5,8 @@ package com.github.unafraid.signer.signer.model;
  * Exception class used for document signing errors.
  */
 public class DocumentSignException extends Exception {
+    private static final long serialVersionUID = 7500493051966576305L;
+
     public DocumentSignException(String aMessage) {
         super(aMessage);
     }

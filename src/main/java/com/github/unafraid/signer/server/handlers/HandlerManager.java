@@ -1,6 +1,9 @@
 package com.github.unafraid.signer.server.handlers;
 
-import com.github.unafraid.signer.server.handlers.impl.*;
+import com.github.unafraid.signer.server.handlers.impl.APIHandler;
+import com.github.unafraid.signer.server.handlers.impl.DefaultHandler;
+import com.github.unafraid.signer.server.handlers.impl.HelloHandler;
+import com.github.unafraid.signer.server.handlers.impl.NotFoundHandler;
 import com.github.unafraid.signer.server.handlers.model.URLPattern;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpResponse;
@@ -68,7 +71,7 @@ public class HandlerManager {
             method.setAccessible(isAccessible);
             return response;
         } catch (Exception e) {
-            LOGGER.warn("Failed to execute {}", method.getName());
+            LOGGER.warn("Failed to execute {}", method.getName(), e);
         }
         return null;
     }

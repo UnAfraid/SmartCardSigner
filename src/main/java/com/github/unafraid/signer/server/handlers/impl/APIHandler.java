@@ -1,7 +1,6 @@
 package com.github.unafraid.signer.server.handlers.impl;
 
 import com.github.unafraid.signer.gui.controllers.SignController;
-import com.github.unafraid.signer.server.ServerManager;
 import com.github.unafraid.signer.server.handlers.model.URLPattern;
 import com.github.unafraid.signer.signer.DocumentSigner;
 import com.github.unafraid.signer.signer.model.SignedDocument;
@@ -14,21 +13,21 @@ import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpRequest;
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
-import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
-import javafx.stage.StageStyle;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.prefs.Preferences;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_TYPE;
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
@@ -38,6 +37,7 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
  * Created by UnAfraid on 10.7.2015 г..
  */
 public class APIHandler {
+    private static final Logger LOGGER = LoggerFactory.getLogger(APIHandler.class);
     protected static volatile MessageDigest md = null;
 
     @URLPattern("/api/?")
@@ -70,53 +70,54 @@ public class APIHandler {
             return new DefaultFullHttpResponse(HTTP_1_1, BAD_REQUEST, Unpooled.wrappedBuffer("Bad request!".getBytes(StandardCharsets.UTF_8)));
         }
 
-        // show form
-        System.out.println("show form start");
         FXMLLoader fxmlLoader = new FXMLLoader(Object.class.getResource("/views/Sign.fxml"));
-
+        AtomicBoolean isDone = new AtomicBoolean();
+        AtomicReference<String> result = new AtomicReference<>("");
+        AtomicReference<String> pinCode = new AtomicReference<>("");
         Platform.runLater(() -> {
             try {
                 final Stage stage = new Stage();
                 final Scene scene = new Scene(fxmlLoader.load());
                 stage.initModality(Modality.APPLICATION_MODAL);
-                stage.setTitle("ABC");
+                stage.setTitle("Text Signing Request");
                 stage.setScene(scene);
                 final SignController controller = fxmlLoader.getController();
                 controller.setDomainName("google.com");
                 controller.setContentToSign(contentToSign);
+                pinCode.set(controller.getPinCode());
                 stage.showAndWait();
-                System.out.println("closed dialog");
-                System.out.println(scene.getUserData());
+                if (isDone.compareAndSet(false, true)) {
+                    result.set((String) scene.getUserData());
+                }
             } catch (IOException e) {
-                e.printStackTrace();
+                LOGGER.warn("Error: ", e);
             }
         });
 
-        System.out.println("show form end");
-
-        if (System.getenv("x") == null) {
-            return null;
+        while (!isDone.get()) {
+            try {
+                Thread.sleep(100L);
+            } catch (InterruptedException e) {
+            }
         }
 
         final Gson gson = new GsonBuilder().create();
         final Map<String, String> data = new LinkedHashMap<>();
 
-        data.put("text", contentToSign);
+        // data.put("text", contentToSign);
 
-        byte[] hash = sha1(contentToSign.getBytes());
-        data.put("hash", Arrays.toString(hash));
+        byte[] hash = sha1(result.get().getBytes());
+        // data.put("hash", Arrays.toString(hash));
 
-        final DocumentSigner signer = new DocumentSigner();
-        final SignedDocument result;
-
+        final SignedDocument resultDocument;
         try {
-            result = signer.sign(hash, Preferences.userRoot().get(ServerManager.MIDLWARE_PATH, null), System.getProperty(ServerManager.CARD_PIN));
+            resultDocument = DocumentSigner.sign(hash);
         } catch (Exception e) {
             return new DefaultFullHttpResponse(HTTP_1_1, INTERNAL_SERVER_ERROR, Unpooled.wrappedBuffer(e.getMessage().getBytes(StandardCharsets.UTF_8)));
         }
 
-        data.put("certificationChain", result.getCertificationChain());
-        data.put("signature", result.getSignature());
+        data.put("certificationChain", resultDocument.getCertificationChain());
+        data.put("signature", resultDocument.getSignature());
 
         final JsonElement element = gson.toJsonTree(data);
         final DefaultFullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK, Unpooled.wrappedBuffer(element.toString().getBytes(StandardCharsets.UTF_8)));
