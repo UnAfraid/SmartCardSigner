@@ -10,5 +10,6 @@ import java.security.cert.Certificate;
  */
 public class PrivateKeyAndCertChain {
     public PrivateKey mPrivateKey;
+    public Certificate mCertificate;
     public Certificate[] mCertificationChain;
 }

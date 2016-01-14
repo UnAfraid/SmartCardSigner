@@ -8,10 +8,12 @@ package com.github.unafraid.signer.signer.model;
 public class SignedDocument {
     private String _certificationChain = null;
     private String _signature = null;
+    private String _signedData = null;
 
-    public SignedDocument(String certificationChain, String signature) {
+    public SignedDocument(String certificationChain, String signature, String signedData) {
         _certificationChain = certificationChain;
         _signature = signature;
+        _signedData = signedData;
     }
 
     public String getCertificationChain() {
@@ -20,5 +22,9 @@ public class SignedDocument {
 
     public String getSignature() {
         return _signature;
+    }
+
+    public String getSignedData() {
+        return _signedData;
     }
 }

@@ -101,13 +101,7 @@ public class APIHandler {
             }
         }
 
-        final Gson gson = new GsonBuilder().create();
-        final Map<String, String> data = new LinkedHashMap<>();
-
-        // data.put("text", contentToSign);
-
-        byte[] hash = sha1(result.get().getBytes());
-        // data.put("hash", Arrays.toString(hash));
+        byte[] hash = sha1(contentToSign.getBytes());
 
         final SignedDocument resultDocument;
         try {
@@ -116,12 +110,8 @@ public class APIHandler {
             return new DefaultFullHttpResponse(HTTP_1_1, INTERNAL_SERVER_ERROR, Unpooled.wrappedBuffer(e.getMessage().getBytes(StandardCharsets.UTF_8)));
         }
 
-        data.put("certificationChain", resultDocument.getCertificationChain());
-        data.put("signature", resultDocument.getSignature());
-
-        final JsonElement element = gson.toJsonTree(data);
-        final DefaultFullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK, Unpooled.wrappedBuffer(element.toString().getBytes(StandardCharsets.UTF_8)));
-        response.headers().set(CONTENT_TYPE, "application/json");
+        final DefaultFullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK, Unpooled.wrappedBuffer(resultDocument.getSignedData().getBytes(StandardCharsets.UTF_8)));
+        response.headers().set(CONTENT_TYPE, "text/plain; charset=us-ascii");
         return response;
     }
 

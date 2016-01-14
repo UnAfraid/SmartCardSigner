@@ -4,16 +4,19 @@ import com.github.unafraid.signer.signer.model.DocumentSignException;
 import com.github.unafraid.signer.signer.model.PrivateKeyAndCertChain;
 import com.github.unafraid.signer.signer.model.SignedDocument;
 import com.github.unafraid.signer.utils.IOUtils;
+import sun.security.pkcs.*;
 import sun.security.pkcs11.SunPKCS11;
+import sun.security.util.DerOutputStream;
+import sun.security.x509.AlgorithmId;
+import sun.security.x509.X500Name;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.security.*;
-import java.security.cert.CertPath;
+import java.security.cert.*;
 import java.security.cert.Certificate;
-import java.security.cert.CertificateException;
-import java.security.cert.CertificateFactory;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Enumeration;
@@ -73,10 +76,16 @@ public class DocumentSigner {
             throw new DocumentSignException("Can not find the private key on the smart card.");
         }
 
+        // Check if X.509 certificate is available
+        final Certificate cert = privateKeyAndCertChain.mCertificate;
+        if (cert == null) {
+            throw new DocumentSignException("Can not find the certificate on the smart card.");
+        }
+
         // Check if X.509 certification chain is available
         final Certificate[] certChain = privateKeyAndCertChain.mCertificationChain;
         if (certChain == null) {
-            throw new DocumentSignException("Can not find the certificate on the smart card.");
+            throw new DocumentSignException("Can not find the certification chain on the smart card.");
         }
 
         // Save X.509 certification chain in the result encoded in Base64
@@ -89,15 +98,66 @@ public class DocumentSigner {
 
         // Calculate the digital signature of the file, encode it in Base64 and save it in the result
         final String signature;
+        byte[] digitalSignature;
         try {
-            byte[] digitalSignature = signDocument(data, privateKey);
+            digitalSignature = signDocument(data, privateKey);
             signature = new String(Base64.getEncoder().encode(digitalSignature));
         } catch (GeneralSecurityException e) {
             throw new DocumentSignException("File signing failed.\nProblem details: " + e.getMessage(), e);
         }
 
+        // Generate crypto.signText()-compatible string
+        final String signedData;
+
+        X509Certificate c = (X509Certificate) cert;
+        AlgorithmId digestAlgorithmId = new AlgorithmId(AlgorithmId.SHA_oid);
+        AlgorithmId signAlgorithmId = new AlgorithmId(AlgorithmId.RSAEncryption_oid);
+
+        PKCS9Attributes authenticatedAttributes = null;
+
+        try {
+            authenticatedAttributes = new PKCS9Attributes(new PKCS9Attribute[] {
+                new PKCS9Attribute(PKCS9Attribute.CONTENT_TYPE_OID, ContentInfo.DATA_OID),
+                new PKCS9Attribute(PKCS9Attribute.MESSAGE_DIGEST_OID, data),
+                new PKCS9Attribute(PKCS9Attribute.SIGNING_TIME_OID, new java.util.Date()),
+            });
+        }
+        catch (IOException e) {
+            // who cares
+        }
+
+        PKCS7 p7 = new PKCS7(
+            new AlgorithmId[] {
+                digestAlgorithmId
+            },
+            new ContentInfo(ContentInfo.DATA_OID, null),
+            (X509Certificate[]) certChain,
+            new SignerInfo[] {
+                new SignerInfo(
+                    X500Name.asX500Name(c.getSubjectX500Principal()),
+                    c.getSerialNumber(),
+                    digestAlgorithmId,
+                    authenticatedAttributes,
+                    signAlgorithmId,
+                    digitalSignature,
+                    null
+                )
+            }
+        );
+
+        ByteArrayOutputStream bOut = new DerOutputStream();
+
+        try {
+            p7.encodeSignedData(bOut);
+        }
+        catch (IOException e) {
+            // who cares
+        }
+
+        signedData = new String(Base64.getEncoder().encode(bOut.toByteArray()));
+
         // Create the result object
-        return new SignedDocument(certificationChain, signature);
+        return new SignedDocument(certificationChain, signature, signedData);
     }
 
     /**
@@ -134,10 +194,12 @@ public class DocumentSigner {
         final Enumeration<String> aliasesEnum = aKeyStore.aliases();
         if (aliasesEnum.hasMoreElements()) {
             final String alias = aliasesEnum.nextElement();
+            final Certificate certificate = aKeyStore.getCertificate(alias);
             final Certificate[] certificationChain = aKeyStore.getCertificateChain(alias);
             final PrivateKey privateKey = (PrivateKey) aKeyStore.getKey(alias, null);
             final PrivateKeyAndCertChain result = new PrivateKeyAndCertChain();
             result.mPrivateKey = privateKey;
+            result.mCertificate = certificate;
             result.mCertificationChain = certificationChain;
             return result;
         } else {
