@@ -1,45 +1,22 @@
 package com.github.unafraid.signer.signer;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.security.GeneralSecurityException;
-import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.PrivateKey;
-import java.security.Security;
-import java.security.Signature;
-import java.security.cert.CertPath;
-import java.security.cert.Certificate;
-import java.security.cert.CertificateException;
-import java.security.cert.CertificateFactory;
-import java.security.cert.X509Certificate;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Base64;
-import java.util.Collection;
-import java.util.Date;
-import java.util.Enumeration;
-import java.util.List;
-
 import com.github.unafraid.signer.signer.model.DocumentSignException;
 import com.github.unafraid.signer.signer.model.PrivateKeyAndCertChain;
 import com.github.unafraid.signer.signer.model.SignedDocument;
 import com.github.unafraid.signer.utils.IOUtils;
-
-import sun.security.pkcs.ContentInfo;
-import sun.security.pkcs.PKCS7;
-import sun.security.pkcs.PKCS9Attribute;
-import sun.security.pkcs.PKCS9Attributes;
-import sun.security.pkcs.SignerInfo;
+import sun.security.pkcs.*;
 import sun.security.pkcs11.SunPKCS11;
-import sun.security.util.DerOutputStream;
+import sun.security.util.DerOutputStreamWithoutSort;
 import sun.security.x509.AlgorithmId;
 import sun.security.x509.X500Name;
+
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.security.*;
+import java.security.cert.*;
+import java.security.cert.Certificate;
+import java.util.*;
 
 /**
  * Created by Svetlin Nakov on 10.7.2005 year..
@@ -136,22 +113,21 @@ public class DocumentSigner {
 
 		PKCS9Attributes authenticatedAttributes;
 
-		try (ByteArrayOutputStream out = new DerOutputStream()) {
+		try (ByteArrayOutputStream out = new DerOutputStreamWithoutSort()) {
 
 			final List<Certificate> certificates = new ArrayList<>();
 			try {
-				for (File file : new File("certs").listFiles(file -> file.getName().endsWith(".pem"))) {
+                certificates.add(cert);
+				for (File file : new File("certs").listFiles(f -> f.getName().endsWith(".pem"))) {
 					certificates.addAll(getCertificates(file.toPath()));
 				}
 			} catch (CertificateException e) {
 				throw new DocumentSignException("Certificate exception!", e);
 			} catch (IOException e) {
-				throw new DocumentSignException("Couldn't open certificate!", e);
-			}
-			finally {
-				certificates.add(cert);
-			}
+                throw new DocumentSignException("Couldn't open certificate!", e);
+            }
 
+            X509Certificate[] fullCertChain = certificates.toArray(new X509Certificate[certificates.size()]);
 			try {
 				// @formatter:off
 				authenticatedAttributes = new PKCS9Attributes(new PKCS9Attribute[] {
@@ -160,12 +136,12 @@ public class DocumentSigner {
 					new PKCS9Attribute(PKCS9Attribute.SIGNING_TIME_OID, new Date()), 
 				});
 
-				PKCS7 p7 = new PKCS7(
+                PKCS7WithoutSort p7 = new PKCS7WithoutSort(
 					new AlgorithmId[] { 
 						digestAlgorithmId 
 					},
-					new ContentInfo(ContentInfo.DATA_OID, null), 
-					certificates.toArray(new X509Certificate[0]),
+					new ContentInfo(ContentInfo.DATA_OID, null),
+                    fullCertChain,
 					new SignerInfo[] { 
 						new SignerInfo(
 							X500Name.asX500Name(cert.getIssuerX500Principal()),

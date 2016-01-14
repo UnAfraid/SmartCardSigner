@@ -28,7 +28,10 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
+import static io.netty.handler.codec.http.HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_TYPE;
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
@@ -110,8 +113,8 @@ public class APIHandler {
             return new DefaultFullHttpResponse(HTTP_1_1, INTERNAL_SERVER_ERROR, Unpooled.wrappedBuffer(e.getMessage().getBytes(StandardCharsets.UTF_8)));
         }
 
-        final DefaultFullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK, Unpooled.wrappedBuffer(resultDocument.getSignedData().getBytes(StandardCharsets.UTF_8)));
-        response.headers().set(CONTENT_TYPE, "text/plain; charset=us-ascii");
+        final DefaultFullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK, Unpooled.wrappedBuffer(Stream.of(resultDocument.getSignedData().split("(?<=\\G.{64})")).collect(Collectors.joining("\n")).getBytes(StandardCharsets.UTF_8)));
+        response.headers().set(CONTENT_TYPE, "text/plain; charset=us-ascii").set(ACCESS_CONTROL_ALLOW_ORIGIN, "*");
         return response;
     }
 
