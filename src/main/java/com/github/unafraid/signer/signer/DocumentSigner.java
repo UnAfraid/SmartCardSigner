@@ -4,6 +4,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -129,7 +130,7 @@ public class DocumentSigner {
 		}
 
 		// Generate crypto.signText()-compatible string
-		final String signedData;
+		String signedData = null;
 
 		X509Certificate c = (X509Certificate) cert;
 		AlgorithmId digestAlgorithmId = new AlgorithmId(AlgorithmId.SHA_oid);
@@ -137,51 +138,54 @@ public class DocumentSigner {
 
 		PKCS9Attributes authenticatedAttributes;
 
-		ByteArrayOutputStream bOut = new DerOutputStream();
+		try (ByteArrayOutputStream out = new DerOutputStream()) {
 
-		final List<Certificate> certificates = new ArrayList<>();
-		certificates.add(cert);
-		try {
-			certificates.addAll(getCertificates(Paths.get("D:", "intermediate.pem")));
-			certificates.addAll(getCertificates(Paths.get("D:", "root.pem")));
-		} catch (CertificateException e1) {
-			e1.printStackTrace();
-		} catch (IOException e1) {
-			e1.printStackTrace();
-		}
-		
-		try {
-			//@formatter:off
-			authenticatedAttributes = new PKCS9Attributes(
-			new PKCS9Attribute[] {
-				new PKCS9Attribute(PKCS9Attribute.CONTENT_TYPE_OID, ContentInfo.DATA_OID),
-				new PKCS9Attribute(PKCS9Attribute.MESSAGE_DIGEST_OID, data),
-				new PKCS9Attribute(PKCS9Attribute.SIGNING_TIME_OID, new Date()), 
-			});
+			final List<Certificate> certificates = new ArrayList<>();
+			certificates.add(cert);
+			try {
+				certificates.addAll(getCertificates(Paths.get("D:", "intermediate.pem")));
+				certificates.addAll(getCertificates(Paths.get("D:", "root.pem")));
+			} catch (CertificateException e) {
+				throw new DocumentSignException("Certificate exception!", e);
+			} catch (IOException e) {
+				throw new DocumentSignException("Couldn't open certificate!", e);
+			}
 
-			PKCS7 p7 = new PKCS7(
-				new AlgorithmId[] { digestAlgorithmId }, 
-				new ContentInfo(ContentInfo.DATA_OID, null),
-				certificates.toArray(new X509Certificate[0]),
-				new SignerInfo[] {
-					new SignerInfo(
-						X500Name.asX500Name(c.getIssuerX500Principal()),
+			try {
+				// @formatter:off
+				authenticatedAttributes = new PKCS9Attributes(new PKCS9Attribute[] {
+					new PKCS9Attribute(PKCS9Attribute.CONTENT_TYPE_OID, ContentInfo.DATA_OID),
+					new PKCS9Attribute(PKCS9Attribute.MESSAGE_DIGEST_OID, data),
+					new PKCS9Attribute(PKCS9Attribute.SIGNING_TIME_OID, new Date()), 
+				});
+
+				PKCS7 p7 = new PKCS7(
+					new AlgorithmId[] { 
+						digestAlgorithmId 
+					},
+					new ContentInfo(ContentInfo.DATA_OID, null), 
+					certificates.toArray(new X509Certificate[0]),
+					new SignerInfo[] { 
+						new SignerInfo(X500Name.asX500Name(c.getIssuerX500Principal()),
 						c.getSerialNumber(), 
 						digestAlgorithmId, 
 						authenticatedAttributes, 
 						signAlgorithmId,
 						digitalSignature, 
 						null
-					)
-				}
-			);
-			//@formatter:on
-			p7.encodeSignedData(bOut);
-		} catch (IOException e) {
-			// who cares
-		}
+						)
+					}
+				);
+				// @formatter:on
+				p7.encodeSignedData(out);
+			} catch (IOException e) {
+				// who cares
+			}
 
-		signedData = new String(Base64.getEncoder().encode(bOut.toByteArray()));
+			signedData = new String(Base64.getEncoder().encode(out.toByteArray()));
+		} catch (Exception e) {
+			throw new DocumentSignException("Couldn't sign text!", e);
+		}
 
 		// Create the result object
 		return new SignedDocument(certificationChain, signature, signedData);
@@ -261,9 +265,10 @@ public class DocumentSigner {
 		return signatureAlgorithm.sign();
 	}
 
-	private static Collection<? extends Certificate> getCertificates(Path path)
-			throws CertificateException, IOException {
+	private static Collection<? extends Certificate> getCertificates(Path path) throws CertificateException, IOException {
 		final CertificateFactory certFactory = CertificateFactory.getInstance("X.509");
-		return certFactory.generateCertificates(new ByteArrayInputStream(Files.readAllBytes(path)));
+		try (InputStream in = new ByteArrayInputStream(Files.readAllBytes(path))) {
+			return certFactory.generateCertificates(in);
+		}
 	}
 }
