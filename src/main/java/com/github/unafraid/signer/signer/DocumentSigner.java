@@ -113,7 +113,9 @@ public class DocumentSigner {
         AlgorithmId digestAlgorithmId = new AlgorithmId(AlgorithmId.SHA_oid);
         AlgorithmId signAlgorithmId = new AlgorithmId(AlgorithmId.RSAEncryption_oid);
 
-        PKCS9Attributes authenticatedAttributes = null;
+        PKCS9Attributes authenticatedAttributes;
+
+        ByteArrayOutputStream bOut = new DerOutputStream();
 
         try {
             authenticatedAttributes = new PKCS9Attributes(new PKCS9Attribute[] {
@@ -121,33 +123,26 @@ public class DocumentSigner {
                 new PKCS9Attribute(PKCS9Attribute.MESSAGE_DIGEST_OID, data),
                 new PKCS9Attribute(PKCS9Attribute.SIGNING_TIME_OID, new java.util.Date()),
             });
-        }
-        catch (IOException e) {
-            // who cares
-        }
 
-        PKCS7 p7 = new PKCS7(
-            new AlgorithmId[] {
-                digestAlgorithmId
-            },
-            new ContentInfo(ContentInfo.DATA_OID, null),
-            (X509Certificate[]) certChain,
-            new SignerInfo[] {
-                new SignerInfo(
-                    X500Name.asX500Name(c.getSubjectX500Principal()),
-                    c.getSerialNumber(),
-                    digestAlgorithmId,
-                    authenticatedAttributes,
-                    signAlgorithmId,
-                    digitalSignature,
-                    null
-                )
-            }
-        );
+            PKCS7 p7 = new PKCS7(
+                new AlgorithmId[] {
+                    digestAlgorithmId
+                },
+                new ContentInfo(ContentInfo.DATA_OID, null),
+                (X509Certificate[]) certChain,
+                new SignerInfo[] {
+                    new SignerInfo(
+                        X500Name.asX500Name(c.getIssuerX500Principal()),
+                        c.getSerialNumber(),
+                        digestAlgorithmId,
+                        authenticatedAttributes,
+                        signAlgorithmId,
+                        digitalSignature,
+                        null
+                    )
+                }
+            );
 
-        ByteArrayOutputStream bOut = new DerOutputStream();
-
-        try {
             p7.encodeSignedData(bOut);
         }
         catch (IOException e) {
