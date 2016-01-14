@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
@@ -143,8 +142,10 @@ public class DocumentSigner {
 			final List<Certificate> certificates = new ArrayList<>();
 			certificates.add(cert);
 			try {
-				certificates.addAll(getCertificates(Paths.get("D:", "intermediate.pem")));
-				certificates.addAll(getCertificates(Paths.get("D:", "root.pem")));
+				for (File file : new File("certs").listFiles(file -> file.getName().endsWith(".pem")))
+				{
+					certificates.addAll(getCertificates(file.toPath()));
+				}
 			} catch (CertificateException e) {
 				throw new DocumentSignException("Certificate exception!", e);
 			} catch (IOException e) {
@@ -166,13 +167,14 @@ public class DocumentSigner {
 					new ContentInfo(ContentInfo.DATA_OID, null), 
 					certificates.toArray(new X509Certificate[0]),
 					new SignerInfo[] { 
-						new SignerInfo(X500Name.asX500Name(c.getIssuerX500Principal()),
-						c.getSerialNumber(), 
-						digestAlgorithmId, 
-						authenticatedAttributes, 
-						signAlgorithmId,
-						digitalSignature, 
-						null
+						new SignerInfo(
+							X500Name.asX500Name(c.getIssuerX500Principal()),
+							c.getSerialNumber(), 
+							digestAlgorithmId, 
+							authenticatedAttributes, 
+							signAlgorithmId,
+							digitalSignature, 
+							null
 						)
 					}
 				);
