@@ -98,7 +98,7 @@ public class DocumentSigner {
 		}
 
 		// Check if X.509 certificate is available
-		final Certificate cert = privateKeyAndCertChain.mCertificate;
+		final X509Certificate cert = privateKeyAndCertChain.mCertificate;
 		if (cert == null) {
 			throw new DocumentSignException("Can not find the certificate on the smart card.");
 		}
@@ -131,7 +131,6 @@ public class DocumentSigner {
 		// Generate crypto.signText()-compatible string
 		String signedData = null;
 
-		X509Certificate c = (X509Certificate) cert;
 		AlgorithmId digestAlgorithmId = new AlgorithmId(AlgorithmId.SHA_oid);
 		AlgorithmId signAlgorithmId = new AlgorithmId(AlgorithmId.RSAEncryption_oid);
 
@@ -140,16 +139,17 @@ public class DocumentSigner {
 		try (ByteArrayOutputStream out = new DerOutputStream()) {
 
 			final List<Certificate> certificates = new ArrayList<>();
-			certificates.add(cert);
 			try {
-				for (File file : new File("certs").listFiles(file -> file.getName().endsWith(".pem")))
-				{
+				for (File file : new File("certs").listFiles(file -> file.getName().endsWith(".pem"))) {
 					certificates.addAll(getCertificates(file.toPath()));
 				}
 			} catch (CertificateException e) {
 				throw new DocumentSignException("Certificate exception!", e);
 			} catch (IOException e) {
 				throw new DocumentSignException("Couldn't open certificate!", e);
+			}
+			finally {
+				certificates.add(cert);
 			}
 
 			try {
@@ -168,8 +168,8 @@ public class DocumentSigner {
 					certificates.toArray(new X509Certificate[0]),
 					new SignerInfo[] { 
 						new SignerInfo(
-							X500Name.asX500Name(c.getIssuerX500Principal()),
-							c.getSerialNumber(), 
+							X500Name.asX500Name(cert.getIssuerX500Principal()),
+							cert.getSerialNumber(), 
 							digestAlgorithmId, 
 							authenticatedAttributes, 
 							signAlgorithmId,
@@ -205,15 +205,13 @@ public class DocumentSigner {
 		// First configure the Sun PKCS#11 provider. It requires a stream (or
 		// file)
 		// containing the configuration parameters - "name" and "library".
-		final String config = String.format(
-				IOUtils.streamToByteArray(DocumentSigner.class.getResourceAsStream("/keystore.conf")), MIDDLEWARE_PATH);
+		final String config = String.format(IOUtils.streamToByteArray(DocumentSigner.class.getResourceAsStream("/keystore.conf")), MIDDLEWARE_PATH);
 
 		// Instantiate the provider dynamically with Java reflection
 		try (ByteArrayInputStream confStream = new ByteArrayInputStream(config.getBytes())) {
 			Security.addProvider(new SunPKCS11(confStream));
 		} catch (Exception e) {
-			throw new KeyStoreException(
-					"Can initialize Sun PKCS#11 security provider. Reason: " + e.getCause().getMessage());
+			throw new KeyStoreException("Can initialize Sun PKCS#11 security provider. Reason: " + e.getCause().getMessage());
 		}
 
 		// Read the keystore form the smart card
@@ -232,7 +230,7 @@ public class DocumentSigner {
 		final Enumeration<String> aliasesEnum = aKeyStore.aliases();
 		if (aliasesEnum.hasMoreElements()) {
 			final String alias = aliasesEnum.nextElement();
-			final Certificate certificate = aKeyStore.getCertificate(alias);
+			final X509Certificate certificate = (X509Certificate) aKeyStore.getCertificate(alias);
 			final Certificate[] certificationChain = aKeyStore.getCertificateChain(alias);
 			final PrivateKey privateKey = (PrivateKey) aKeyStore.getKey(alias, null);
 			final PrivateKeyAndCertChain result = new PrivateKeyAndCertChain();
@@ -268,7 +266,7 @@ public class DocumentSigner {
 	}
 
 	private static Collection<? extends Certificate> getCertificates(Path path) throws CertificateException, IOException {
-		final CertificateFactory certFactory = CertificateFactory.getInstance("X.509");
+		final CertificateFactory certFactory = CertificateFactory.getInstance(X509_CERTIFICATE_TYPE);
 		try (InputStream in = new ByteArrayInputStream(Files.readAllBytes(path))) {
 			return certFactory.generateCertificates(in);
 		}
