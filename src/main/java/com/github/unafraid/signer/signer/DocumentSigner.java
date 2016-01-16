@@ -10,6 +10,7 @@ import sun.security.util.DerOutputStreamWithoutSort;
 import sun.security.x509.AlgorithmId;
 import sun.security.x509.X500Name;
 
+import javax.swing.text.Document;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -28,6 +29,7 @@ public class DocumentSigner {
 	private static final String X509_CERTIFICATE_TYPE = "X.509";
 	private static final String CERTIFICATION_CHAIN_ENCODING = "PkiPath";
 	private static final String DIGITAL_SIGNATURE_ALGORITHM_NAME = "SHA1withRSA";
+	protected static volatile MessageDigest md = null;
 
 	public static synchronized void init(String middlewarePath, String pinCode) throws Exception {
 		MIDDLEWARE_PATH = middlewarePath;
@@ -44,6 +46,8 @@ public class DocumentSigner {
 			throw new DocumentSignException(
 					"It is mandatory to choose a PCKS#11 native implementation library for for smart card (.dll or .so file)!");
 		}
+
+		byte[] hash = sha1(data);
 
 		// Load the keystore from the smart card using the specified PIN code
 		final KeyStore userKeyStore;
@@ -106,7 +110,7 @@ public class DocumentSigner {
 		}
 
 		// Generate crypto.signText()-compatible string
-		String signedData = null;
+		String signedData;
 
 		AlgorithmId digestAlgorithmId = new AlgorithmId(AlgorithmId.SHA_oid);
 		AlgorithmId signAlgorithmId = new AlgorithmId(AlgorithmId.RSAEncryption_oid);
@@ -132,7 +136,7 @@ public class DocumentSigner {
 				// @formatter:off
 				authenticatedAttributes = new PKCS9Attributes(new PKCS9Attribute[] {
 					new PKCS9Attribute(PKCS9Attribute.CONTENT_TYPE_OID, ContentInfo.DATA_OID),
-					new PKCS9Attribute(PKCS9Attribute.MESSAGE_DIGEST_OID, data),
+					new PKCS9Attribute(PKCS9Attribute.MESSAGE_DIGEST_OID, hash),
 					new PKCS9Attribute(PKCS9Attribute.SIGNING_TIME_OID, new Date()), 
 				});
 
@@ -246,5 +250,26 @@ public class DocumentSigner {
 		try (InputStream in = new ByteArrayInputStream(Files.readAllBytes(path))) {
 			return certFactory.generateCertificates(in);
 		}
+	}
+
+	protected static byte[] sha1(byte[] input) {
+		if (md == null) {
+			synchronized (DocumentSigner.class) {
+				if (md == null) {
+					try {
+						md = MessageDigest.getInstance("SHA-1");
+					} catch (NoSuchAlgorithmException e) {
+						e.printStackTrace();
+						return null;
+					}
+				}
+			}
+		}
+
+		if (md != null) {
+			return md.digest(input);
+		}
+
+		return null;
 	}
 }

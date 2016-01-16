@@ -41,7 +41,6 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
  */
 public class APIHandler {
     private static final Logger LOGGER = LoggerFactory.getLogger(APIHandler.class);
-    protected static volatile MessageDigest md = null;
 
     @URLPattern("/api/?")
     public static FullHttpResponse index() {
@@ -104,11 +103,9 @@ public class APIHandler {
             }
         }
 
-        byte[] hash = sha1(contentToSign.getBytes());
-
         final SignedDocument resultDocument;
         try {
-            resultDocument = DocumentSigner.sign(hash);
+            resultDocument = DocumentSigner.sign(contentToSign.getBytes());
         } catch (Exception e) {
             return new DefaultFullHttpResponse(HTTP_1_1, INTERNAL_SERVER_ERROR, Unpooled.wrappedBuffer(e.getMessage().getBytes(StandardCharsets.UTF_8)));
         }
@@ -116,26 +113,5 @@ public class APIHandler {
         final DefaultFullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK, Unpooled.wrappedBuffer(Stream.of(resultDocument.getSignedData().split("(?<=\\G.{64})")).collect(Collectors.joining("\n")).getBytes(StandardCharsets.UTF_8)));
         response.headers().set(CONTENT_TYPE, "text/plain; charset=us-ascii").set(ACCESS_CONTROL_ALLOW_ORIGIN, "*");
         return response;
-    }
-
-    protected static byte[] sha1(byte[] input) {
-        if (md == null) {
-            synchronized (APIHandler.class) {
-                if (md == null) {
-                    try {
-                        md = MessageDigest.getInstance("SHA-1");
-                    } catch (NoSuchAlgorithmException e) {
-                        e.printStackTrace();
-                        return null;
-                    }
-                }
-            }
-        }
-
-        if (md != null) {
-            return md.digest(input);
-        }
-
-        return null;
     }
 }
