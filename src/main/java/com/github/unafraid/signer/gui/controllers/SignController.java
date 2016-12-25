@@ -16,15 +16,26 @@ import java.lang.reflect.Field;
 import java.net.URL;
 import java.security.KeyStore;
 import java.security.cert.X509Certificate;
-import java.util.Date;
-import java.util.Enumeration;
-import java.util.ResourceBundle;
+import java.text.DateFormat;
+import java.util.*;
 
 /**
  * @author Venci
  */
 public class SignController implements Initializable {
     private static final Logger LOGGER = LoggerFactory.getLogger(SignController.class);
+
+    private static final String[] KEY_USAGES = {
+            "Digital Signature",
+            "Non Repudiation",
+            "Key Encipherment",
+            "Data Encipherment",
+            "Key Agreement",
+            "Key Cert Sign",
+            "cRLSign",
+            "Encipher Only",
+            "Decipher Only"
+    };
 
     @FXML
     private Text headerText;
@@ -156,25 +167,48 @@ public class SignController implements Initializable {
         public String getDescription() {
             try {
                 final X509Certificate cert = (X509Certificate) _keyStore.getCertificate(_alias);
-                String issuerName = cert.getIssuerDN().getName();
-                String serialNumber = Integer.toHexString(cert.getSerialNumber().intValue()).toUpperCase();
-                String subjectName = cert.getSubjectDN().getName();
-                Date notBefore = cert.getNotBefore();
-                Date notAfter = cert.getNotAfter();
-                // boolean[] keyUsage = cert.getKeyUsage();
-
-                final StringBuilder sb = new StringBuilder();
-                sb.append("Issued to: ").append(subjectName).append(System.lineSeparator());
-                sb.append("  Serial Number: ").append(serialNumber).append(System.lineSeparator());
-                sb.append("  Valid from ").append(notBefore).append(" to  ").append(notAfter).append(System.lineSeparator());
-                // sb.append("  Certificate Key Usage: ").append(System.lineSeparator());
-                // sb.append("  Email: ").append(System.lineSeparator());
-                sb.append("Issued by: ").append(issuerName).append(System.lineSeparator());
-                sb.append("Stored in: ").append(getTokenLabel());
-                return sb.toString();
+                final String issuerName = cert.getIssuerDN().getName();
+                final String serialNumber = Integer.toHexString(cert.getSerialNumber().intValue()).toUpperCase();
+                final String subjectName = cert.getSubjectDN().getName();
+                final Date notBefore = cert.getNotBefore();
+                final Date notAfter = cert.getNotAfter();
+                final String keyUsage = parseKeyUsage(cert.getKeyUsage());
+                final DateFormat formatter = DateFormat.getDateTimeInstance(DateFormat.LONG, DateFormat.LONG);
+                final StringJoiner sj = new StringJoiner(System.lineSeparator());
+                final Map<String, String> commonNames = parseCommonName(subjectName);
+                sj.add("Issued to: " + subjectName);
+                sj.add("  Serial Number: " + serialNumber);
+                sj.add("  Valid from " + formatter.format(notBefore) + " to " + formatter.format(notAfter));
+                sj.add("  Certificate Key Usage: " + keyUsage);
+                if (commonNames.containsKey("EMAILADDRESS")) {
+                    sj.add("  Email: " + commonNames.get("EMAILADDRESS"));
+                }
+                sj.add("Issued by: " + issuerName);
+                sj.add("Stored in: " + getTokenLabel());
+                return sj.toString();
             } catch (Exception e) {
-                return "error: " + e.getMessage();
+                return "Error: " + e.getMessage();
             }
+        }
+
+        private static String parseKeyUsage(boolean[] keyUsage) {
+            final StringJoiner sj = new StringJoiner(", ");
+            for (int i = 0; i < keyUsage.length; i++) {
+                if (keyUsage[i]) {
+                    sj.add(KEY_USAGES[i]);
+                }
+            }
+            return sj.toString();
+        }
+
+        private static Map<String, String> parseCommonName(String subjectName) {
+            final Map<String, String> values = new HashMap<>();
+            final String[] data = subjectName.split(", ");
+            for (String entry : data) {
+                final String[] keyValuePair = entry.split("=");
+                values.put(keyValuePair[0], keyValuePair[1]);
+            }
+            return values;
         }
     }
 }
