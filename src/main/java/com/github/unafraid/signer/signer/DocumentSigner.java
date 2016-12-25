@@ -11,9 +11,10 @@ import sun.security.pkcs11.SunPKCS11;
 import sun.security.x509.AlgorithmId;
 import sun.security.x509.X500Name;
 
-import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.IOException;
 import java.security.*;
 import java.security.cert.*;
 import java.security.cert.Certificate;
@@ -48,7 +49,7 @@ public class DocumentSigner {
                     "It is mandatory to choose a PCKS#11 native implementation library for for smart card (.dll or .so file)!");
         }
 
-        byte[] hash = sha1(data);
+        final byte[] hash = sha1(data);
 
         // Load the keystore from the smart card using the specified PIN code
         final KeyStore userKeyStore;
@@ -101,17 +102,15 @@ public class DocumentSigner {
 
         // Generate crypto.signText()-compatible string
         String signedData;
-
-        AlgorithmId digestAlgorithmId = new AlgorithmId(AlgorithmId.SHA_oid);
-        AlgorithmId signAlgorithmId = new AlgorithmId(AlgorithmId.RSAEncryption_oid);
-
-        PKCS9Attributes authenticatedAttributes;
         String signature = null;
 
         try (ByteArrayOutputStream out = new ByteArrayOutputStream(1024)) {
             try {
+                AlgorithmId digestAlgorithmId = new AlgorithmId(AlgorithmId.SHA_oid);
+                AlgorithmId signAlgorithmId = new AlgorithmId(AlgorithmId.RSAEncryption_oid);
+
                 // @formatter:off
-				authenticatedAttributes = new PKCS9Attributes(new PKCS9Attribute[] {
+                final PKCS9Attributes authenticatedAttributes = new PKCS9Attributes(new PKCS9Attribute[] {
 					new PKCS9Attribute(PKCS9Attribute.CONTENT_TYPE_OID, ContentInfo.DATA_OID),
 					new PKCS9Attribute(PKCS9Attribute.MESSAGE_DIGEST_OID, hash),
 					new PKCS9Attribute(PKCS9Attribute.SIGNING_TIME_OID, new Date()),
@@ -236,13 +235,6 @@ public class DocumentSigner {
         signatureAlgorithm.initSign(aPrivateKey);
         signatureAlgorithm.update(aDocument);
         return signatureAlgorithm.sign();
-    }
-
-    private static Collection<? extends Certificate> getCertificates(Path path) throws CertificateException, IOException {
-        final CertificateFactory certFactory = CertificateFactory.getInstance(X509_CERTIFICATE_TYPE);
-        try (InputStream in = new ByteArrayInputStream(Files.readAllBytes(path))) {
-            return certFactory.generateCertificates(in);
-        }
     }
 
     protected static byte[] sha1(byte[] input) {
