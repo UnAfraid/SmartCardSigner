@@ -25,7 +25,7 @@ import java.net.Inet4Address;
  */
 public class ServerNetworkManager extends NetworkManager {
     protected ServerNetworkManager() {
-        super(EventLoopGroupManager.getInstance().getBossGroup(), EventLoopGroupManager.getInstance().getWorkerGroup(), new ServerInitializer(null), Inet4Address.getLoopbackAddress().getHostAddress(), 8080);
+        super(EventLoopGroupManager.getInstance().getBossGroup(), EventLoopGroupManager.getInstance().getWorkerGroup(), new ServerInitializer(null));
     }
 
     public static ServerNetworkManager getInstance() {

@@ -36,9 +36,9 @@ import java.net.InetAddress;
  */
 public final class ServerManager {
     private static final Logger LOGGER = LoggerFactory.getLogger(ServerManager.class);
-    private static final String HOSTNAME = System.getProperty("network.hostname", "127.0.0.1");
-    private static final boolean SSL = System.getProperty("network.protocol", "").equalsIgnoreCase("ssl");
-    private static final int PORT = Integer.parseInt(System.getProperty("network.port", SSL ? "8443" : "8080"));
+    private static final String HOSTNAME = System.getenv().getOrDefault("network.hostname", "127.0.0.1");
+    private static final boolean SSL = System.getenv().getOrDefault("network.protocol", "").equalsIgnoreCase("ssl");
+    private static final int PORT = Integer.parseInt(System.getenv().getOrDefault("network.port", SSL ? "8443" : "8080"));
 
     private ServerManager() {
         init();
