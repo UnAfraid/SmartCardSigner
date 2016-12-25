@@ -18,8 +18,6 @@
  */
 package com.github.unafraid.signer.server;
 
-import java.net.Inet4Address;
-
 /**
  * @author Nos
  */

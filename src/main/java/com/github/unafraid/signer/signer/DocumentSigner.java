@@ -6,11 +6,9 @@ import com.github.unafraid.signer.signer.model.SignedDocument;
 import com.github.unafraid.signer.utils.IOUtils;
 import sun.security.pkcs.*;
 import sun.security.pkcs11.SunPKCS11;
-import sun.security.util.DerOutputStreamWithoutSort;
 import sun.security.x509.AlgorithmId;
 import sun.security.x509.X500Name;
 
-import javax.swing.text.Document;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -20,7 +18,7 @@ import java.security.cert.Certificate;
 import java.util.*;
 
 /**
- * Created by Svetlin Nakov on 10.7.2005 year..
+ * @author Svetlin Nakov, UnAfraid, Venci
  */
 public class DocumentSigner {
 	private static KeyStore KEY_STORE;
@@ -111,7 +109,7 @@ public class DocumentSigner {
 
 			final List<Certificate> certificates = new ArrayList<>();
 			try {
-                certificates.add(cert);
+				certificates.add(cert);
 				for (File file : new File("certs").listFiles(f -> f.getName().endsWith(".pem"))) {
 					certificates.addAll(getCertificates(file.toPath()));
 				}
@@ -140,7 +138,7 @@ public class DocumentSigner {
 					throw new DocumentSignException("File signing failed.\nProblem details: " + e.getMessage(), e);
 				}
 
-				PKCS7 p7 = new PKCS7(
+				final PKCS7 p7 = new PKCS7(
 					new AlgorithmId[] { 
 						digestAlgorithmId 
 					},

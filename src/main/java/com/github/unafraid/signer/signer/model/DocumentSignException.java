@@ -1,7 +1,7 @@
 package com.github.unafraid.signer.signer.model;
 
 /**
- * Created by Svetlin Nakov on 10.7.2005 г..
+ * @author Svetlin Nakov on 10.7.2005 г..
  * Exception class used for document signing errors.
  */
 public class DocumentSignException extends Exception {

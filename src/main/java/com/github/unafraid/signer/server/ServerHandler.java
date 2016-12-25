@@ -33,6 +33,9 @@ import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
 
+/**
+ * @author UnAfraid
+ */
 public class ServerHandler extends ChannelHandlerAdapter {
     protected static final Logger LOGGER = LoggerFactory.getLogger(ServerHandler.class);
 

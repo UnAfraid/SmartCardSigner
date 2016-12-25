@@ -1,6 +1,4 @@
-package com.github.unafraid.signer.gui;/**
- * Created by UnAfraid on 11.7.2015 ã..
- */
+package com.github.unafraid.signer.gui;
 
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
@@ -8,6 +6,9 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 
+/**
+ * @author UnAfraid
+ */
 public class Main extends Application {
     @Override
     public void start(Stage primaryStage) throws Exception {

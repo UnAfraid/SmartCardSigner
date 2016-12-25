@@ -21,7 +21,7 @@ import java.util.Enumeration;
 import java.util.ResourceBundle;
 
 /**
- * Created by Venci on 12.9.2015 ã..
+ * @author Venci
  */
 public class SignController implements Initializable {
     private static final Logger LOGGER = LoggerFactory.getLogger(SignController.class);

@@ -17,7 +17,7 @@ import java.net.URL;
 import java.util.ResourceBundle;
 
 /**
- * Created by UnAfraid on 11.7.2015 �..
+ * @author UnAfraid
  */
 public class MainController implements Initializable {
     private static final Logger LOGGER = LoggerFactory.getLogger(MainController.class);

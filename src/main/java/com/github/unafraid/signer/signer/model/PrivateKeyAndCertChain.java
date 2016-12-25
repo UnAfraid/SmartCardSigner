@@ -5,7 +5,7 @@ import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 
 /**
- * Created by Svetlin Nakov on 10.7.2005 г..
+ * @author Svetlin Nakov on 10.7.2005 г..
  * Data structure that holds a pair of private key and
  * certification chain corresponding to this private key.
  */

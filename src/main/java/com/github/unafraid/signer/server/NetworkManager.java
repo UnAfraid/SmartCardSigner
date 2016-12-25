@@ -14,7 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Created by UnAfraid on 11.7.2015 ã..
+ * @author UnAfraid
  */
 public class NetworkManager {
     private final Logger LOGGER = LoggerFactory.getLogger(getClass());

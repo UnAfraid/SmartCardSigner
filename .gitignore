@@ -25,6 +25,7 @@ gradle-app.setting
 .metadata
 bin/
 tmp/
+log/
 *.tmp
 *.bak
 *.swp
