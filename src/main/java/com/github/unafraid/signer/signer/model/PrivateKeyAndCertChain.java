@@ -1,7 +1,6 @@
 package com.github.unafraid.signer.signer.model;
 
 import java.security.PrivateKey;
-import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 
 /**
@@ -12,5 +11,5 @@ import java.security.cert.X509Certificate;
 public class PrivateKeyAndCertChain {
     public PrivateKey mPrivateKey;
     public X509Certificate mCertificate;
-    public Certificate[] mCertificationChain;
+    public X509Certificate[] mCertificationChain;
 }

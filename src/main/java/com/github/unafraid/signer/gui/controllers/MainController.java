@@ -14,6 +14,10 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.ResourceBundle;
 
 /**
@@ -43,6 +47,33 @@ public class MainController implements Initializable {
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         refreshStartStopButton();
+        for (String path : drivers.values()) {
+            if (Files.exists(Paths.get(path))) {
+                middlewarePath.setText(path);
+                break;
+            }
+        }
+    }
+
+    private static final Map<String, String> drivers = new LinkedHashMap<>();
+
+    static {
+        final String windir = System.getenv("windir");
+        final String programFiles = System.getenv("ProgramFiles");
+
+        if ((windir != null) && (windir.length() > 0) && (programFiles != null) && (programFiles.length() > 0)) {
+            drivers.put("Charismatics(32 bit)", windir + "\\System32\\cmP11.dll");
+            drivers.put("Charismatics(64 bit)", windir + "\\SysWOW64\\cmP1164.dll");
+            drivers.put("Bit4id", windir + "\\System32\\bit4ipki.dll");
+            drivers.put("CryptoVision(32 bit)", windir + "\\System32\\cvP11.dll");
+            drivers.put("CryptoVision(64 bit)", windir + "\\SysWOW64\\cvP11.dll");
+            drivers.put("Siemens CardOS", windir + "\\System32\\siecap11.dll");
+            drivers.put("SafeNet/Datakey", windir + "\\system32\\dkck201.dll");
+            drivers.put("ActivCard Gold", windir + "\\System32\\acpkcs.dll");
+            drivers.put("Setec SetWeb", programFiles + "\\SetWeb\\settoki.dll");
+            drivers.put("Gemplus", programFiles + "\\GemPlus\\GemSafe Libraries\\BIN\\gclib.dll");
+            drivers.put("Utimaco SafeGuard", windir + "\\system32\\pkcs201n.dll");
+        }
     }
 
     private void refreshStartStopButton() {
