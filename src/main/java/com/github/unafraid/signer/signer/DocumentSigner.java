@@ -98,17 +98,6 @@ public class DocumentSigner {
 			throw new DocumentSignException("Invalid certificate on the smart card.");
 		}
 
-		// Calculate the digital signature of the file, encode it in Base64 and
-		// save it in the result
-		final String signature;
-		byte[] digitalSignature;
-		try {
-			digitalSignature = signDocument(data, privateKey);
-			signature = new String(Base64.getEncoder().encode(digitalSignature));
-		} catch (GeneralSecurityException e) {
-			throw new DocumentSignException("File signing failed.\nProblem details: " + e.getMessage(), e);
-		}
-
 		// Generate crypto.signText()-compatible string
 		String signedData;
 
@@ -116,8 +105,9 @@ public class DocumentSigner {
 		AlgorithmId signAlgorithmId = new AlgorithmId(AlgorithmId.RSAEncryption_oid);
 
 		PKCS9Attributes authenticatedAttributes;
+		String signature = null;
 
-		try (ByteArrayOutputStream out = new DerOutputStreamWithoutSort()) {
+		try (ByteArrayOutputStream out = new ByteArrayOutputStream(1024)) {
 
 			final List<Certificate> certificates = new ArrayList<>();
 			try {
@@ -137,10 +127,20 @@ public class DocumentSigner {
 				authenticatedAttributes = new PKCS9Attributes(new PKCS9Attribute[] {
 					new PKCS9Attribute(PKCS9Attribute.CONTENT_TYPE_OID, ContentInfo.DATA_OID),
 					new PKCS9Attribute(PKCS9Attribute.MESSAGE_DIGEST_OID, hash),
-					new PKCS9Attribute(PKCS9Attribute.SIGNING_TIME_OID, new Date()), 
+					new PKCS9Attribute(PKCS9Attribute.SIGNING_TIME_OID, new Date()),
 				});
 
-                PKCS7WithoutSort p7 = new PKCS7WithoutSort(
+				// Calculate the digital signature of the file, encode it in Base64 and
+				// save it in the result
+				byte[] digitalSignature;
+				try {
+					digitalSignature = signDocument(authenticatedAttributes.getDerEncoding(), privateKey);
+					signature = new String(Base64.getEncoder().encode(digitalSignature));
+				} catch (GeneralSecurityException e) {
+					throw new DocumentSignException("File signing failed.\nProblem details: " + e.getMessage(), e);
+				}
+
+				PKCS7 p7 = new PKCS7(
 					new AlgorithmId[] { 
 						digestAlgorithmId 
 					},
