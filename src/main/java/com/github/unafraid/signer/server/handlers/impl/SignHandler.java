@@ -44,9 +44,9 @@ import javafx.stage.Stage;
  * @author UnAfraid
  */
 @Route(types = HttpMethodType.POST, paths = "/api/sign")
-public class APIHandler implements IHttpRouteHandler
+public class SignHandler implements IHttpRouteHandler
 {
-	private static final Logger LOGGER = LoggerFactory.getLogger(APIHandler.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(SignHandler.class);
 	
 	@Override
 	public FullHttpResponse onRequest(ChannelHandlerContext ctx, HttpRequest req, RouteResult<IHttpRouteHandler> routeResult)
