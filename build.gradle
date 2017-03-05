@@ -47,7 +47,9 @@ dependencies {
 
 jar {
     manifest {
-        attributes('Main-Class': 'com.github.unafraid.signer.gui.Main')
+        attributes(
+        	'Class-Path': configurations.runtime.collect({ '../libs/' + it.getName() }).join(' '),
+        	'Main-Class': 'com.github.unafraid.signer.gui.Main')
     }
     from {
         configurations.runtime.collect {
