@@ -1,7 +1,12 @@
 package com.github.unafraid.signer.server;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.github.unafraid.signer.server.listeners.ISignRequestListener;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
@@ -28,6 +33,7 @@ public class NetworkManager
 	private final int _port;
 	
 	private ChannelFuture _channelFuture;
+	private final List<ISignRequestListener> _listeners = new ArrayList<>();
 	
 	public NetworkManager()
 	{
@@ -75,6 +81,16 @@ public class NetworkManager
 	public void stop() throws InterruptedException
 	{
 		_channelFuture.channel().close().sync();
+	}
+	
+	public void addListener(ISignRequestListener listener)
+	{
+		_listeners.add(listener);
+	}
+	
+	public List<ISignRequestListener> getListeners()
+	{
+		return _listeners;
 	}
 	
 	public static NetworkManager getInstance()

@@ -1,12 +1,15 @@
 package com.github.unafraid.signer.gui.controllers;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.ResourceBundle;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,20 +21,24 @@ import com.github.unafraid.signer.utils.Dialogs;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
+import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
 import javafx.stage.FileChooser;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
 
 /**
  * @author UnAfraid
  */
 public class MainController implements Initializable
 {
-	private static final Logger LOGGER = LoggerFactory.getLogger(MainController.class);
+	static final Logger LOGGER = LoggerFactory.getLogger(MainController.class);
 	
 	@FXML
 	private Label middlewareLabel;
@@ -86,6 +93,9 @@ public class MainController implements Initializable
 				break;
 			}
 		}
+		
+		// Initialize listener
+		NetworkManager.getInstance().addListener(this::processRequest);
 	}
 	
 	private void refreshStartStopButton()
@@ -180,6 +190,47 @@ public class MainController implements Initializable
 			startStopServerButton.setText("Start server");
 			startStopServerButton.getProperties().remove("started", Boolean.TRUE);
 		}
+	}
+	
+	private boolean processRequest(String domain, String contentToSign)
+	{
+		final FXMLLoader fxmlLoader = new FXMLLoader(Object.class.getResource("/views/Sign.fxml"));
+		final AtomicBoolean isDone = new AtomicBoolean();
+		final AtomicReference<String> pinCode = new AtomicReference<>("");
+		Platform.runLater(() ->
+		{
+			try
+			{
+				final Stage stage = new Stage();
+				final Scene scene = new Scene(fxmlLoader.load());
+				stage.initModality(Modality.APPLICATION_MODAL);
+				stage.setTitle("Text Signing Request");
+				stage.setScene(scene);
+				final SignController controller = fxmlLoader.getController();
+				controller.setDomainName(domain);
+				controller.setContentToSign(contentToSign);
+				pinCode.set(controller.getPinCode());
+				stage.showAndWait();
+				isDone.compareAndSet(false, true);
+			}
+			catch (IOException e)
+			{
+				LOGGER.warn("Error: ", e);
+			}
+		});
+		
+		while (!isDone.get())
+		{
+			try
+			{
+				Thread.sleep(100L);
+			}
+			catch (InterruptedException e)
+			{
+			}
+		}
+		
+		return true;
 	}
 	
 	@FXML

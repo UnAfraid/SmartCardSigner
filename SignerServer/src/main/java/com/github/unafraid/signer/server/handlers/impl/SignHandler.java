@@ -8,37 +8,28 @@ import static io.netty.handler.codec.http.HttpResponseStatus.NO_CONTENT;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.github.unafraid.signer.DocumentSigner;
-import com.github.unafraid.signer.gui.controllers.SignController;
 import com.github.unafraid.signer.model.SignedDocument;
+import com.github.unafraid.signer.server.NetworkManager;
 import com.github.unafraid.signer.server.handlers.IHttpRouteHandler;
 import com.github.unafraid.signer.server.handlers.model.HttpMethodType;
 import com.github.unafraid.signer.server.handlers.model.Route;
+import com.github.unafraid.signer.server.listeners.ISignRequestListener;
 import com.github.unafraid.signer.utils.IOUtils;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.router.RouteResult;
-import javafx.application.Platform;
-import javafx.fxml.FXMLLoader;
-import javafx.scene.Scene;
-import javafx.stage.Modality;
-import javafx.stage.Stage;
 
 /**
  * @author UnAfraid
@@ -46,13 +37,11 @@ import javafx.stage.Stage;
 @Route(types = HttpMethodType.POST, paths = "/api/sign")
 public class SignHandler implements IHttpRouteHandler
 {
-	private static final Logger LOGGER = LoggerFactory.getLogger(SignHandler.class);
-	
 	@Override
 	public FullHttpResponse onRequest(ChannelHandlerContext ctx, HttpRequest req, RouteResult<IHttpRouteHandler> routeResult)
 	{
 		String contentToSign;
-		
+		String domain = "google.com";
 		try
 		{
 			final Map<String, List<String>> requestParams = IOUtils.parseHttpRequest(req);
@@ -60,13 +49,19 @@ public class SignHandler implements IHttpRouteHandler
 			{
 				return new DefaultFullHttpResponse(HTTP_1_1, NO_CONTENT, Unpooled.wrappedBuffer("No Content!".getBytes(StandardCharsets.UTF_8)));
 			}
+			
 			final List<String> dataToSign = requestParams.get("data");
 			if ((dataToSign == null) || dataToSign.isEmpty())
 			{
 				return new DefaultFullHttpResponse(HTTP_1_1, NO_CONTENT, Unpooled.wrappedBuffer("No 'data' Content!".getBytes(StandardCharsets.UTF_8)));
 			}
-			
 			contentToSign = dataToSign.get(0);
+			
+			final List<String> domains = requestParams.get("domain");
+			if ((domains != null) && !domains.isEmpty())
+			{
+				domain = domains.get(0);
+			}
 		}
 		catch (Exception e)
 		{
@@ -78,58 +73,31 @@ public class SignHandler implements IHttpRouteHandler
 			return new DefaultFullHttpResponse(HTTP_1_1, BAD_REQUEST, Unpooled.wrappedBuffer("Bad request!".getBytes(StandardCharsets.UTF_8)));
 		}
 		
-		FXMLLoader fxmlLoader = new FXMLLoader(Object.class.getResource("/views/Sign.fxml"));
-		AtomicBoolean isDone = new AtomicBoolean();
-		AtomicReference<String> result = new AtomicReference<>("");
-		AtomicReference<String> pinCode = new AtomicReference<>("");
-		Platform.runLater(() ->
+		for (ISignRequestListener request : NetworkManager.getInstance().getListeners())
 		{
-			try
+			if (request.processRequest(domain, contentToSign))
 			{
-				final Stage stage = new Stage();
-				final Scene scene = new Scene(fxmlLoader.load());
-				stage.initModality(Modality.APPLICATION_MODAL);
-				stage.setTitle("Text Signing Request");
-				stage.setScene(scene);
-				final SignController controller = fxmlLoader.getController();
-				controller.setDomainName("google.com");
-				controller.setContentToSign(contentToSign);
-				pinCode.set(controller.getPinCode());
-				stage.showAndWait();
-				if (isDone.compareAndSet(false, true))
+				final SignedDocument resultDocument;
+				try
 				{
-					result.set((String) scene.getUserData());
+					resultDocument = DocumentSigner.sign(contentToSign.getBytes());
 				}
-			}
-			catch (IOException e)
-			{
-				LOGGER.warn("Error: ", e);
-			}
-		});
-		
-		while (!isDone.get())
-		{
-			try
-			{
-				Thread.sleep(100L);
-			}
-			catch (InterruptedException e)
-			{
+				catch (Exception e)
+				{
+					return new DefaultFullHttpResponse(HTTP_1_1, INTERNAL_SERVER_ERROR, Unpooled.wrappedBuffer(e.getMessage().getBytes(StandardCharsets.UTF_8)));
+				}
+				
+				final ByteBuf buffer = Unpooled.wrappedBuffer(Stream.of(resultDocument.getSignedData().split("(?<=\\G.{64})")).collect(Collectors.joining("\n")).getBytes(StandardCharsets.UTF_8));
+				final DefaultFullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK, buffer);
+				//@formatter:off
+				response.headers()
+					.set(CONTENT_TYPE, "text/plain; charset=us-ascii")
+					.set(ACCESS_CONTROL_ALLOW_ORIGIN, "*");
+				//@formatter:on
+				return response;
 			}
 		}
 		
-		final SignedDocument resultDocument;
-		try
-		{
-			resultDocument = DocumentSigner.sign(contentToSign.getBytes());
-		}
-		catch (Exception e)
-		{
-			return new DefaultFullHttpResponse(HTTP_1_1, INTERNAL_SERVER_ERROR, Unpooled.wrappedBuffer(e.getMessage().getBytes(StandardCharsets.UTF_8)));
-		}
-		
-		final DefaultFullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, OK, Unpooled.wrappedBuffer(Stream.of(resultDocument.getSignedData().split("(?<=\\G.{64})")).collect(Collectors.joining("\n")).getBytes(StandardCharsets.UTF_8)));
-		response.headers().set(CONTENT_TYPE, "text/plain; charset=us-ascii").set(ACCESS_CONTROL_ALLOW_ORIGIN, "*");
-		return response;
+		return new DefaultFullHttpResponse(HTTP_1_1, INTERNAL_SERVER_ERROR, Unpooled.wrappedBuffer("No match".getBytes(StandardCharsets.UTF_8)));
 	}
 }

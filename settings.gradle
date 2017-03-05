@@ -1,2 +1,4 @@
-include('netty-router')
 include('SignerAPI')
+include('SignerGUI')
+include('SignerServerRouter')
+include('SignerServer')
