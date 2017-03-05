@@ -1,0 +1,13 @@
+apply plugin: "java"
+apply plugin: "idea"
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+	compile(group: "io.netty", name: "netty-all", version: "4.1.7.Final")
+	testCompile "junit:junit:4.11"
+}

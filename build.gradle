@@ -1,94 +1,80 @@
-buildscript {
-    repositories {
-        maven {
-	      url "https://plugins.gradle.org/m2/"
-	    }
-    }
-
-    dependencies {
-        classpath "gradle.plugin.edu.sc.seis.gradle:launch4j:2.1.0"
-        classpath "com.github.jengelman.gradle.plugins:shadow:1.2.4"
-    	classpath "gradle.plugin.de.sebastianboegl.gradle.plugins:shadow-log4j-transformer:1.0.1"
-    }
+plugins {
+	id 'org.ajoberstar.grgit' version '1.5.1'
 }
 
-
-apply plugin: "java"
-apply plugin: "idea"
-apply plugin: "eclipse"
-apply plugin: "edu.sc.seis.launch4j"
-apply plugin: "com.github.johnrengelman.shadow"
-apply plugin: "de.sebastianboegl.shadow.transformer.log4j"
-
-sourceCompatibility = 1.8
-
-repositories {
-    mavenCentral()
-}
-
-eclipse {
-	project {
-		natures("org.springsource.ide.eclipse.gradle.core.nature")
+subprojects {
+	apply plugin: 'org.ajoberstar.grgit'
+	apply plugin: 'eclipse'
+	// apply plugin: 'distribution'
+	
+	group = 'com.github.unafraid'
+	// version = '1.0'
+		
+	repositories {
+		mavenCentral()
 	}
-}
-
-tasks.eclipse.doLast {
-	copy {
-		from("eclipse-settings")
-		into(".settings")
+	
+	eclipse {
+		project {
+			natures('org.springsource.ide.eclipse.gradle.core.nature')
+		}
 	}
-}
 
-tasks.cleanEclipse.doLast {
-	delete(".settings")
-}
+	tasks.eclipse.doLast {
+		copy {
+			from('../eclipse-settings')
+			into('.settings')
+		}
+	}
 
-tasks.withType(JavaCompile) {
-	options.encoding = "UTF-8"
+	tasks.cleanEclipse.doLast {
+		delete('.settings')
+	}
+	
+	tasks.withType(JavaCompile) {
+		options.encoding = 'UTF-8'
+	}
+	
+	/*distZip {
+		eachFile { copySpec ->
+			includeEmptyDirs = false
+			def raw = copySpec.getPath()
+			if (raw.startsWith(project.name)) {
+				copySpec.setPath(raw.minus(project.name));
+			}
+		}
+	}*/
+	
+	tasks.withType(Jar) {
+		def grgit = org.ajoberstar.grgit.Grgit.open(project.file('..'))
+		
+		manifest {
+			attributes(
+				'Created-By': System.getProperty('java.version') + ' (' + System.getProperty('java.vendor') + ')',
+				'Built-By': System.getProperty('user.name'),
+				'Implementation-URL': 'http://www.l2junity.org/',
+				'Implementation-Time': new Date().format('yyyy-MM-dd_hh:mm'),
+				'Git-Branch': grgit.branch.getCurrent().getName(),
+				'Git-Hash-Full': grgit.head().id,
+				'Git-Hash-Short': grgit.head().getAbbreviatedId(),
+				'Git-Commit-Count': grgit.log(includes:['HEAD']).size(),
+			)
+		}
+	}
 }
 
 task wrapper(type: Wrapper) {
-    gradleVersion = "3.0"
+	gradleVersion = '3.3'
 }
 
-dependencies {
-	// compile(fileTree(dir: "libs", include: "*.jar"))
-    compile(group: "com.google.code.gson", name: "gson", version: "2.3.1")
-    compile(group: "org.slf4j", name: "slf4j-api", version: "1.7.12")
-    compile(group: "org.apache.logging.log4j", name: "log4j-slf4j-impl", version: "2.3")
-    compile(group: "org.apache.logging.log4j", name: "log4j-core", version: "2.3")
-	compile(group: "io.netty", name: "netty-all", version: "4.1.7.Final")
-    compile(group: "tv.cntt", name: "netty-router", version: "2.0.0") {
-    	exclude module: "netty-all"
-    }
-    compile(group: "org.javassist", name: "javassist", version: "3.20.0-GA")
-    compile(group: "org.reflections", name: "reflections", version: "0.9.10")
+def contentSpec = copySpec {
+	subprojects.each { subproject ->
+		from subproject.buildDir
+		include 'distributions/**'
+	}
 }
 
-def generalManifest = manifest {
-	attributes(
-		"Built-By": System.getProperty("user.name"),
-		"Implementation-URL": "http://www.l2junity.org/",
-		"Main-Class": "com.github.unafraid.signer.gui.Main",
-	)
-}
-
-jar {
-    manifest {
-        from(generalManifest)
-    }
-}
-
-shadowJar {
-    manifest {
-        from(generalManifest)
-    }
-}
-
-launch4j {
-    copyConfigurable = project.tasks.shadowJar.outputs.files
-    jar = "lib/${project.tasks.shadowJar.archiveName}"
-    mainClassName = "com.github.unafraid.signer.gui.Main"
-    icon = project.projectDir.getAbsolutePath() + "/launch4j/app.ico"
-    manifest = project.projectDir.getAbsolutePath() + "/launch4j/Signer.exe.manifest"
+task distributionCopy(type: Copy) {
+	into project.buildDir  
+	with contentSpec
 }
