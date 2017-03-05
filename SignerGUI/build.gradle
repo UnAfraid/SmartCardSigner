@@ -14,8 +14,6 @@ buildscript {
 
 
 apply plugin: "java"
-apply plugin: "idea"
-apply plugin: "eclipse"
 apply plugin: "edu.sc.seis.launch4j"
 apply plugin: "com.github.johnrengelman.shadow"
 apply plugin: "de.sebastianboegl.shadow.transformer.log4j"

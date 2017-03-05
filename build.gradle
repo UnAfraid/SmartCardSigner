@@ -1,14 +1,5 @@
-plugins {
-	id 'org.ajoberstar.grgit' version '1.5.1'
-}
-
 subprojects {
-	apply plugin: 'org.ajoberstar.grgit'
 	apply plugin: 'eclipse'
-	// apply plugin: 'distribution'
-	
-	group = 'com.github.unafraid'
-	// version = '1.0'
 		
 	repositories {
 		mavenCentral()
@@ -34,47 +25,8 @@ subprojects {
 	tasks.withType(JavaCompile) {
 		options.encoding = 'UTF-8'
 	}
-	
-	/*distZip {
-		eachFile { copySpec ->
-			includeEmptyDirs = false
-			def raw = copySpec.getPath()
-			if (raw.startsWith(project.name)) {
-				copySpec.setPath(raw.minus(project.name));
-			}
-		}
-	}*/
-	
-	tasks.withType(Jar) {
-		def grgit = org.ajoberstar.grgit.Grgit.open(project.file('..'))
-		
-		manifest {
-			attributes(
-				'Created-By': System.getProperty('java.version') + ' (' + System.getProperty('java.vendor') + ')',
-				'Built-By': System.getProperty('user.name'),
-				'Implementation-URL': 'http://www.l2junity.org/',
-				'Implementation-Time': new Date().format('yyyy-MM-dd_hh:mm'),
-				'Git-Branch': grgit.branch.getCurrent().getName(),
-				'Git-Hash-Full': grgit.head().id,
-				'Git-Hash-Short': grgit.head().getAbbreviatedId(),
-				'Git-Commit-Count': grgit.log(includes:['HEAD']).size(),
-			)
-		}
-	}
 }
 
 task wrapper(type: Wrapper) {
 	gradleVersion = '3.3'
-}
-
-def contentSpec = copySpec {
-	subprojects.each { subproject ->
-		from subproject.buildDir
-		include 'distributions/**'
-	}
-}
-
-task distributionCopy(type: Copy) {
-	into project.buildDir  
-	with contentSpec
 }
