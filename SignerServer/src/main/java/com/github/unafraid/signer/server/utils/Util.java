@@ -1,4 +1,4 @@
-package com.github.unafraid.signer.utils;
+package com.github.unafraid.signer.server.utils;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -18,7 +18,7 @@ import io.netty.handler.codec.http.multipart.InterfaceHttpData;
 /**
  * Created by UnAfraid on 10.7.2015 г..
  */
-public class IOUtils
+public class Util
 {
 	public static String streamToByteArray(InputStream stream) throws IOException
 	{

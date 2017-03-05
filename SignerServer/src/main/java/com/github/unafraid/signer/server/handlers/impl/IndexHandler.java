@@ -12,7 +12,7 @@ import org.slf4j.LoggerFactory;
 import com.github.unafraid.signer.server.handlers.IHttpRouteHandler;
 import com.github.unafraid.signer.server.handlers.model.HttpMethodType;
 import com.github.unafraid.signer.server.handlers.model.Route;
-import com.github.unafraid.signer.utils.IOUtils;
+import com.github.unafraid.signer.server.utils.Util;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -44,10 +44,10 @@ public class IndexHandler implements IHttpRouteHandler
 		final ByteBuf outputBuf = Unpooled.buffer();
 		try
 		{
-			String template = IOUtils.streamToByteArray(IndexHandler.class.getResourceAsStream("/index.html"));
+			String template = Util.streamToByteArray(IndexHandler.class.getResourceAsStream("/index.html"));
 			final StringBuilder tableBuilder = new StringBuilder();
 			final StringBuilder paramsBuilder = new StringBuilder();
-			final Map<String, List<String>> params = IOUtils.parseHttpRequest(req);
+			final Map<String, List<String>> params = Util.parseHttpRequest(req);
 			params.entrySet().forEach(entry -> entry.getValue().forEach(value -> paramsBuilder.append("<tr><td>").append(entry.getKey()).append("</td><td>").append(value).append("</td></tr>")));
 			
 			req.headers().forEach(httpRequest -> tableBuilder.append("<tr><td>").append(httpRequest.getKey()).append("</td><td>").append(httpRequest.getValue()).append("</td></tr>"));

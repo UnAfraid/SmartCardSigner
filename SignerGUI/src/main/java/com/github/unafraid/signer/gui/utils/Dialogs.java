@@ -1,4 +1,4 @@
-package com.github.unafraid.signer.utils;
+package com.github.unafraid.signer.gui.utils;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;

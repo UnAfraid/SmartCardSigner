@@ -21,7 +21,7 @@ import com.github.unafraid.signer.server.handlers.IHttpRouteHandler;
 import com.github.unafraid.signer.server.handlers.model.HttpMethodType;
 import com.github.unafraid.signer.server.handlers.model.Route;
 import com.github.unafraid.signer.server.listeners.ISignRequestListener;
-import com.github.unafraid.signer.utils.IOUtils;
+import com.github.unafraid.signer.server.utils.Util;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -44,7 +44,7 @@ public class SignHandler implements IHttpRouteHandler
 		String domain = "google.com";
 		try
 		{
-			final Map<String, List<String>> requestParams = IOUtils.parseHttpRequest(req);
+			final Map<String, List<String>> requestParams = Util.parseHttpRequest(req);
 			if (requestParams.isEmpty() || requestParams.values().isEmpty())
 			{
 				return new DefaultFullHttpResponse(HTTP_1_1, NO_CONTENT, Unpooled.wrappedBuffer("No Content!".getBytes(StandardCharsets.UTF_8)));
