@@ -15,27 +15,40 @@
  */
 package com.github.unafraid.signer.server;
 
+import com.github.unafraid.signer.server.handlers.IHttpRouteHandler;
+
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.handler.codec.http.BadClientSilencer;
+import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
+import io.netty.handler.codec.http.router.Router;
 import io.netty.handler.ssl.SslContext;
 
-public class ServerInitializer extends ChannelInitializer<SocketChannel> {
-
-    private final SslContext _sslCtx;
-
-    public ServerInitializer(SslContext sslCtx) {
-        _sslCtx = sslCtx;
-    }
-
-    @Override
-    public void initChannel(SocketChannel ch) {
-        final ChannelPipeline p = ch.pipeline();
-        if (_sslCtx != null) {
-            p.addLast(_sslCtx.newHandler(ch.alloc()));
-        }
-        p.addLast(new HttpServerCodec());
-        p.addLast(new ServerHandler());
-    }
+public class ServerInitializer extends ChannelInitializer<SocketChannel>
+{
+	private final SslContext _sslCtx;
+	private final Router<IHttpRouteHandler> _router;
+	private final BadClientSilencer badClientSilencer = new BadClientSilencer();
+	
+	public ServerInitializer(SslContext sslCtx, RouterInitializer initializer)
+	{
+		_sslCtx = sslCtx;
+		_router = initializer.getRouter();
+	}
+	
+	@Override
+	public void initChannel(SocketChannel ch)
+	{
+		final ChannelPipeline p = ch.pipeline();
+		if (_sslCtx != null)
+		{
+			p.addLast(_sslCtx.newHandler(ch.alloc()));
+		}
+		p.addLast(new HttpServerCodec());
+		p.addLast(new HttpObjectAggregator(1048576));
+		p.addLast(new ServerHandler(_router));
+		p.addLast(badClientSilencer);
+	}
 }

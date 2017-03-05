@@ -15,75 +15,83 @@
  */
 package com.github.unafraid.signer.server;
 
-import com.github.unafraid.signer.server.handlers.HandlerManager;
-import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandlerAdapter;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.http.*;
+import static io.netty.handler.codec.http.HttpHeaderNames.CONNECTION;
+import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
+import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_TYPE;
+import static io.netty.handler.codec.http.HttpResponseStatus.CONTINUE;
+import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
-import java.util.function.BiFunction;
+import com.github.unafraid.signer.server.handlers.IHttpRouteHandler;
 
-import static io.netty.handler.codec.http.HttpHeaderNames.*;
-import static io.netty.handler.codec.http.HttpResponseStatus.CONTINUE;
-import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
-import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
-
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpHeaderValues;
+import io.netty.handler.codec.http.HttpRequest;
+import io.netty.handler.codec.http.HttpUtil;
+import io.netty.handler.codec.http.router.RouteResult;
+import io.netty.handler.codec.http.router.Router;
 
 /**
  * @author UnAfraid
  */
-public class ServerHandler extends ChannelHandlerAdapter {
-    protected static final Logger LOGGER = LoggerFactory.getLogger(ServerHandler.class);
-
-    @Override
-    public void channelReadComplete(ChannelHandlerContext ctx) {
-        ctx.flush();
-    }
-
-    @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) {
-        if (msg instanceof HttpRequest) {
-            final HttpRequest req = (HttpRequest) msg;
-
-            if (HttpHeaderUtil.is100ContinueExpected(req)) {
-                ctx.write(new DefaultFullHttpResponse(HTTP_1_1, CONTINUE));
-            }
-
-            final List<BiFunction<ChannelHandlerContext, HttpRequest, FullHttpResponse>> handlers = HandlerManager.getInstance().getHandler(req.uri());
-            for (BiFunction<ChannelHandlerContext, HttpRequest, FullHttpResponse> handler : handlers) {
-                final FullHttpResponse response = handler.apply(ctx, req);
-                if (response != null) {
-                    processResponse(ctx, req, response);
-                    return;
-                }
-            }
-
-            // This shouldn't happen ever!
-            processResponse(ctx, req, new DefaultFullHttpResponse(HTTP_1_1, NOT_FOUND, Unpooled.wrappedBuffer("Default handler was not found".getBytes())));
-        }
-    }
-
-    private void processResponse(ChannelHandlerContext ctx, HttpRequest req, FullHttpResponse response) {
-        if (response.headers().get(CONTENT_TYPE, null) == null) {
-            response.headers().set(CONTENT_TYPE, "text/html");
-        }
-        response.headers().setInt(CONTENT_LENGTH, response.content().readableBytes());
-
-        if (!HttpHeaderUtil.isKeepAlive(req)) {
-            ctx.write(response).addListener(ChannelFutureListener.CLOSE);
-        } else {
-            response.headers().set(CONNECTION, HttpHeaderValues.KEEP_ALIVE);
-            ctx.write(response);
-        }
-    }
-
-    @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-        cause.printStackTrace();
-        ctx.close();
-    }
+public class ServerHandler extends ChannelInboundHandlerAdapter
+{
+	protected static final Logger LOGGER = LoggerFactory.getLogger(ServerHandler.class);
+	private final Router<IHttpRouteHandler> _router;
+	
+	public ServerHandler(Router<IHttpRouteHandler> router)
+	{
+		_router = router;
+	}
+	
+	@Override
+	public void channelReadComplete(ChannelHandlerContext ctx)
+	{
+		ctx.flush();
+	}
+	
+	@Override
+	public void channelRead(ChannelHandlerContext ctx, Object msg)
+	{
+		if (msg instanceof HttpRequest)
+		{
+			final HttpRequest req = (HttpRequest) msg;
+			
+			if (HttpUtil.is100ContinueExpected(req))
+			{
+				ctx.write(new DefaultFullHttpResponse(HTTP_1_1, CONTINUE));
+			}
+			
+			final RouteResult<IHttpRouteHandler> routeResult = _router.route(req.method(), req.uri());
+			final FullHttpResponse response = routeResult.target().onRequest(ctx, req, routeResult);
+			if (response.headers().get(CONTENT_TYPE, null) == null)
+			{
+				response.headers().set(CONTENT_TYPE, "text/html");
+			}
+			response.headers().setInt(CONTENT_LENGTH, response.content().readableBytes());
+			
+			if (!HttpUtil.isKeepAlive(req))
+			{
+				ctx.write(response).addListener(ChannelFutureListener.CLOSE);
+			}
+			else
+			{
+				response.headers().set(CONNECTION, HttpHeaderValues.KEEP_ALIVE);
+				ctx.write(response);
+			}
+		}
+	}
+	
+	@Override
+	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
+	{
+		LOGGER.warn("exceptionCaught", cause);
+		ctx.close();
+	}
 }

@@ -9,7 +9,10 @@ import java.lang.annotation.Target;
  * Created by UnAfraid on 10.7.2015 г..
  */
 @Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.METHOD)
-public @interface URLPattern {
-    String value();
+@Target(ElementType.TYPE)
+public @interface Route
+{
+	HttpMethodType[] types();
+	
+	String[] paths();
 }
