@@ -1,4 +1,4 @@
-package com.github.unafraid.signer.signer.model;
+package com.github.unafraid.signer.model;
 
 /**
  * @author Svetlin Nakov on 10.7.2005 г.. Data structure that holds a pair of Base64-encoded certification chain and digital signature.

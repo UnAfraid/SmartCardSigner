@@ -1,4 +1,4 @@
-package com.github.unafraid.signer.signer.model;
+package com.github.unafraid.signer.model;
 
 /**
  * @author Svetlin Nakov on 10.7.2005 г.. Exception class used for document signing errors.

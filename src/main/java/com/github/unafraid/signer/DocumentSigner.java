@@ -1,4 +1,4 @@
-package com.github.unafraid.signer.signer;
+package com.github.unafraid.signer;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -26,9 +26,9 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.github.unafraid.signer.signer.model.DocumentSignException;
-import com.github.unafraid.signer.signer.model.PrivateKeyAndCertChain;
-import com.github.unafraid.signer.signer.model.SignedDocument;
+import com.github.unafraid.signer.model.DocumentSignException;
+import com.github.unafraid.signer.model.PrivateKeyAndCertChain;
+import com.github.unafraid.signer.model.SignedDocument;
 import com.github.unafraid.signer.utils.IOUtils;
 
 import sun.security.pkcs.ContentInfo;

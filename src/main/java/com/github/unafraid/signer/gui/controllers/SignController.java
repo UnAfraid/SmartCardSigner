@@ -15,7 +15,7 @@ import java.util.StringJoiner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.github.unafraid.signer.signer.DocumentSigner;
+import com.github.unafraid.signer.DocumentSigner;
 
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;

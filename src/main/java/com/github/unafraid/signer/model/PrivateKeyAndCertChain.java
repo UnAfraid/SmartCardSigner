@@ -1,4 +1,4 @@
-package com.github.unafraid.signer.signer.model;
+package com.github.unafraid.signer.model;
 
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;

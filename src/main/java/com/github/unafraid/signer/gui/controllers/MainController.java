@@ -11,8 +11,8 @@ import java.util.ResourceBundle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.github.unafraid.signer.DocumentSigner;
 import com.github.unafraid.signer.server.NetworkManager;
-import com.github.unafraid.signer.signer.DocumentSigner;
 import com.github.unafraid.signer.utils.Dialogs;
 
 import javafx.application.Platform;

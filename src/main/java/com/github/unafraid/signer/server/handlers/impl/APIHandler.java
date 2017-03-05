@@ -20,12 +20,12 @@ import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.github.unafraid.signer.DocumentSigner;
 import com.github.unafraid.signer.gui.controllers.SignController;
+import com.github.unafraid.signer.model.SignedDocument;
 import com.github.unafraid.signer.server.handlers.IHttpRouteHandler;
 import com.github.unafraid.signer.server.handlers.model.HttpMethodType;
 import com.github.unafraid.signer.server.handlers.model.Route;
-import com.github.unafraid.signer.signer.DocumentSigner;
-import com.github.unafraid.signer.signer.model.SignedDocument;
 import com.github.unafraid.signer.utils.IOUtils;
 
 import io.netty.buffer.Unpooled;
