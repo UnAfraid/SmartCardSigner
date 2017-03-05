@@ -13,6 +13,7 @@ import com.github.unafraid.signer.server.handlers.IHttpRouteHandler;
 import com.github.unafraid.signer.server.handlers.model.HttpMethodType;
 import com.github.unafraid.signer.server.handlers.model.Route;
 import com.github.unafraid.signer.server.utils.Util;
+import com.github.unafraid.signer.utils.IOUtils;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -44,7 +45,7 @@ public class IndexHandler implements IHttpRouteHandler
 		final ByteBuf outputBuf = Unpooled.buffer();
 		try
 		{
-			String template = Util.streamToByteArray(IndexHandler.class.getResourceAsStream("/index.html"));
+			String template = IOUtils.streamToByteArray(IndexHandler.class.getResourceAsStream("/index.html"));
 			final StringBuilder tableBuilder = new StringBuilder();
 			final StringBuilder paramsBuilder = new StringBuilder();
 			final Map<String, List<String>> params = Util.parseHttpRequest(req);
