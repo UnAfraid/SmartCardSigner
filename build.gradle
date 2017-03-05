@@ -1,6 +1,23 @@
+buildscript {
+    repositories {
+        maven {
+	      url "https://plugins.gradle.org/m2/"
+	    }
+    }
+
+    dependencies {
+        classpath "gradle.plugin.edu.sc.seis.gradle:launch4j:2.1.0"
+        classpath "com.github.jengelman.gradle.plugins:shadow:1.2.4"
+    	classpath "gradle.plugin.de.sebastianboegl.gradle.plugins:shadow-log4j-transformer:1.0.1"
+    }
+}
+
+
 apply plugin: 'java'
 apply plugin: 'idea'
 apply plugin: 'eclipse'
+apply plugin: "edu.sc.seis.launch4j"
+apply plugin: "de.sebastianboegl.shadow.transformer.log4j"
 
 sourceCompatibility = 1.8
 
@@ -45,15 +62,24 @@ dependencies {
     compile(group: 'org.reflections', name: 'reflections', version: '0.9.10')
 }
 
+def generalManifest = manifest {
+	attributes(
+		"Built-By": System.getProperty("user.name"),
+		"Implementation-URL": "http://www.l2junity.org/",
+		"Main-Class": "com.github.unafraid.signer.gui.Main",
+	)
+}
+
 jar {
     manifest {
-        attributes(
-        	'Class-Path': configurations.runtime.collect({ '../libs/' + it.getName() }).join(' '),
-        	'Main-Class': 'com.github.unafraid.signer.gui.Main')
+        from(generalManifest)
     }
-    from {
-        configurations.runtime.collect {
-            it.isDirectory() ? it : zipTree(it)
-        }
-    }
+}
+
+launch4j {
+    copyConfigurable = project.tasks.shadowJar.outputs.files
+    jar = "lib/${project.tasks.shadowJar.archiveName}"
+    mainClassName = "com.github.unafraid.signer.gui.Main"
+    icon = project.projectDir.getAbsolutePath() + "/launch4j/app.ico"
+    manifest = project.projectDir.getAbsolutePath() + "/launch4j/Signer.exe.manifest"
 }
