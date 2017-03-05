@@ -13,10 +13,11 @@ buildscript {
 }
 
 
-apply plugin: 'java'
-apply plugin: 'idea'
-apply plugin: 'eclipse'
+apply plugin: "java"
+apply plugin: "idea"
+apply plugin: "eclipse"
 apply plugin: "edu.sc.seis.launch4j"
+apply plugin: "com.github.johnrengelman.shadow"
 apply plugin: "de.sebastianboegl.shadow.transformer.log4j"
 
 sourceCompatibility = 1.8
@@ -27,39 +28,39 @@ repositories {
 
 eclipse {
 	project {
-		natures('org.springsource.ide.eclipse.gradle.core.nature')
+		natures("org.springsource.ide.eclipse.gradle.core.nature")
 	}
 }
 
 tasks.eclipse.doLast {
 	copy {
-		from('eclipse-settings')
-		into('.settings')
+		from("eclipse-settings")
+		into(".settings")
 	}
 }
 
 tasks.cleanEclipse.doLast {
-	delete('.settings')
+	delete(".settings")
 }
 
 tasks.withType(JavaCompile) {
-	options.encoding = 'UTF-8'
+	options.encoding = "UTF-8"
 }
 
 task wrapper(type: Wrapper) {
-    gradleVersion = '3.0'
+    gradleVersion = "3.0"
 }
 
 dependencies {
-	// compile(fileTree(dir: 'libs', include: '*.jar'))
-    compile(group: 'com.google.code.gson', name: 'gson', version: '2.3.1')
-    compile(group: 'org.slf4j', name: 'slf4j-api', version: '1.7.12')
-    compile(group: 'org.apache.logging.log4j', name: 'log4j-slf4j-impl', version: '2.3')
-    compile(group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.3')
-	compile(group: 'io.netty', name: 'netty-all', version: '4.1.7.Final')
-    compile(group: 'tv.cntt', name: 'netty-router', version: '2.0.0')
-    compile(group: 'org.javassist', name: 'javassist', version: '3.20.0-GA')
-    compile(group: 'org.reflections', name: 'reflections', version: '0.9.10')
+	// compile(fileTree(dir: "libs", include: "*.jar"))
+    compile(group: "com.google.code.gson", name: "gson", version: "2.3.1")
+    compile(group: "org.slf4j", name: "slf4j-api", version: "1.7.12")
+    compile(group: "org.apache.logging.log4j", name: "log4j-slf4j-impl", version: "2.3")
+    compile(group: "org.apache.logging.log4j", name: "log4j-core", version: "2.3")
+	compile(group: "io.netty", name: "netty-all", version: "4.1.7.Final")
+    compile(group: "tv.cntt", name: "netty-router", version: "2.0.0")
+    compile(group: "org.javassist", name: "javassist", version: "3.20.0-GA")
+    compile(group: "org.reflections", name: "reflections", version: "0.9.10")
 }
 
 def generalManifest = manifest {
@@ -71,6 +72,12 @@ def generalManifest = manifest {
 }
 
 jar {
+    manifest {
+        from(generalManifest)
+    }
+}
+
+shadowJar {
     manifest {
         from(generalManifest)
     }
